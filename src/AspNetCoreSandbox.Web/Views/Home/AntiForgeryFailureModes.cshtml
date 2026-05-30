@@ -1,0 +1,93 @@
+@{
+    ViewData["Title"] = "AntiForgery missing vs invalid token";
+
+    var formFieldName = ViewData["FormFieldName"] as string ?? "__RequestVerificationToken";
+    var headerName = ViewData["HeaderName"] as string ?? "RequestVerificationToken";
+    var cookieName = ViewData["CookieName"] as string ?? "";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">AntiForgery missing vs invalid token</h1>
+        <p class="text-muted">
+            Compare how antiforgery validation fails for missing request token, invalid request token, and missing cookie token.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Current token metadata</h2>
+                <pre class="mb-0">FormFieldName: [@formFieldName]
+HeaderName: [@headerName]
+CookieName: [@cookieName]</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-scenario="valid-form">Valid baseline (form token)</button>
+            <button type="button" class="btn btn-outline-primary" data-scenario="missing-request">Missing request token</button>
+            <button type="button" class="btn btn-outline-danger" data-scenario="invalid-request">Invalid request token</button>
+            <button type="button" class="btn btn-danger" data-scenario="missing-cookie">Missing cookie token</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Result</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+
+        <form id="tokenForm" method="post" action="/Home/AntiForgeryFailureModes" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+            const tokenInput = document.querySelector('#tokenForm input[name="@formFieldName"]');
+            const token = tokenInput ? tokenInput.value : '';
+            const formFieldName = '@formFieldName';
+            const headerName = '@headerName';
+
+            async function postScenario(scenario) {
+                const params = new URLSearchParams();
+                params.set('scenario', scenario);
+
+                const headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                };
+
+                const options = {
+                    method: 'POST',
+                    headers,
+                    body: params.toString(),
+                    credentials: 'same-origin'
+                };
+
+                if (scenario === 'valid-form') {
+                    params.set(formFieldName, token);
+                    options.body = params.toString();
+                } else if (scenario === 'invalid-request') {
+                    params.set(formFieldName, 'invalid-token-value');
+                    options.body = params.toString();
+                } else if (scenario === 'missing-cookie') {
+                    headers[headerName] = token;
+                    options.credentials = 'omit';
+                    options.body = params.toString();
+                }
+
+                const response = await fetch('/Home/AntiForgeryFailureModes', options);
+                const text = await response.text();
+                result.textContent = 'HTTP ' + response.status + '\n' + text;
+            }
+
+            document.querySelectorAll('button[data-scenario]').forEach(button => {
+                button.addEventListener('click', () => {
+                    postScenario(button.dataset.scenario);
+                });
+            });
+        })();
+    </script>
+}

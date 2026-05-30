@@ -162,6 +162,66 @@ public class HomeController : Controller
         });
     }
 
+    [HttpGet("Home/AntiForgeryFailureModes")]
+    public IActionResult AntiForgeryFailureModes()
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        ViewData["FormFieldName"] = tokens.FormFieldName;
+        ViewData["HeaderName"] = tokens.HeaderName ?? _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        ViewData["CookieName"] = _antiforgeryOptions.Cookie.Name ?? string.Empty;
+        ViewData["RequestToken"] = tokens.RequestToken ?? string.Empty;
+        return View();
+    }
+
+    [HttpPost("Home/AntiForgeryFailureModes")]
+    public async Task<IActionResult> AntiForgeryFailureModesPost([FromForm] string? scenario)
+    {
+        var headerName = _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        var formFieldName = _antiforgeryOptions.FormFieldName;
+        var cookieName = _antiforgeryOptions.Cookie.Name ?? string.Empty;
+
+        var hasHeaderToken = Request.Headers.ContainsKey(headerName);
+        var hasFormToken = Request.HasFormContentType && Request.Form.ContainsKey(formFieldName);
+        var hasCookieToken = Request.Cookies.ContainsKey(cookieName);
+
+        try
+        {
+            await _antiforgery.ValidateRequestAsync(HttpContext);
+
+            return Json(new
+            {
+                status = 200,
+                scenario = scenario ?? string.Empty,
+                valid = true,
+                message = "Validation succeeded.",
+                headerName,
+                formFieldName,
+                cookieName,
+                hasHeaderToken,
+                hasFormToken,
+                hasCookieToken
+            });
+        }
+        catch (AntiforgeryValidationException exception)
+        {
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+
+            return Json(new
+            {
+                status = 400,
+                scenario = scenario ?? string.Empty,
+                valid = false,
+                message = exception.Message,
+                headerName,
+                formFieldName,
+                cookieName,
+                hasHeaderToken,
+                hasFormToken,
+                hasCookieToken
+            });
+        }
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
