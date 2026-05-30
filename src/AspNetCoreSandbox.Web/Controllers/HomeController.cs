@@ -82,6 +82,17 @@ public class HomeController : Controller
         return View("NoFallback");
     }
 
+    [HttpGet("Home/DuplicateInQuery")]
+    public IActionResult DuplicateInQuery(int? age)
+    {
+        ViewData["BoundAge"] = age?.ToString() ?? "(null)";
+        ViewData["QueryAgeValues"] = string.Join(" | ", HttpContext.Request.Query["age"].AsEnumerable());
+        ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
+            ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
+            : Array.Empty<string>());
+        return View();
+    }
+
     public IActionResult Privacy()
     {
         return View();

@@ -1,0 +1,30 @@
+@{
+    ViewData["Title"] = "Duplicate key in query";
+    var boundAge = ViewData["BoundAge"]?.ToString();
+    var queryAgeValues = ViewData["QueryAgeValues"]?.ToString();
+    var ageErrors = ViewData["AgeErrors"]?.ToString();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="display-6 mb-3">Duplicate key in query</h1>
+        <p class="text-muted">
+            Observe how MVC binds a scalar when the same query key appears multiple times.
+        </p>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">Current request</h2>
+                <pre class="mb-0">Bound age=[@boundAge]
+Query age values=[@queryAgeValues]
+ModelState(age)=[@ageErrors]</pre>
+            </div>
+        </div>
+
+        <div class="small text-muted">
+            <p class="mb-1">Try these URLs:</p>
+            <div><code>/Home/DuplicateInQuery?age=abc&age=42</code></div>
+            <div><code>/Home/DuplicateInQuery?age=42&age=abc</code></div>
+        </div>
+    </div>
+</div>
