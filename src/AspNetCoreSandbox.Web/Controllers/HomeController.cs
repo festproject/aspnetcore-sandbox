@@ -93,6 +93,22 @@ public class HomeController : Controller
         return View();
     }
 
+    [HttpGet("Home/DuplicateInForm")]
+    public IActionResult DuplicateInForm()
+    {
+        PopulateDuplicateInFormViewData(age: null);
+        return View();
+    }
+
+    [HttpPost("Home/DuplicateInForm")]
+    [ValidateAntiForgeryToken]
+    public IActionResult DuplicateInFormPost(int? age)
+    {
+        PopulateDuplicateInFormViewData(age);
+        ViewData["Message"] = "Posted.";
+        return View("DuplicateInForm");
+    }
+
     [HttpGet("Home/FailureDefinitions")]
     public IActionResult FailureDefinitions([FromQuery] FailureDefinitionsInput input)
     {
@@ -127,6 +143,17 @@ public class HomeController : Controller
             : Array.Empty<string>());
         ViewData["BindRequiredOnlyErrors"] = string.Join(" | ", ModelState.TryGetValue(nameof(FailureDefinitionsInput.BindRequiredOnly), out var bindRequiredEntry)
             ? bindRequiredEntry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
+            : Array.Empty<string>());
+    }
+
+    private void PopulateDuplicateInFormViewData(int? age)
+    {
+        ViewData["BoundAge"] = age?.ToString() ?? "(null)";
+        ViewData["FormAgeValues"] = HttpContext.Request.HasFormContentType
+            ? string.Join(" | ", HttpContext.Request.Form["age"].AsEnumerable())
+            : string.Empty;
+        ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
+            ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
             : Array.Empty<string>());
     }
 

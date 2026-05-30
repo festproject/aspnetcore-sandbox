@@ -1,0 +1,53 @@
+@{
+    ViewData["Title"] = "Duplicate key in form";
+    var boundAge = ViewData["BoundAge"]?.ToString();
+    var formAgeValues = ViewData["FormAgeValues"]?.ToString();
+    var ageErrors = ViewData["AgeErrors"]?.ToString();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="display-6 mb-3">Duplicate key in form</h1>
+        <p class="text-muted">
+            Observe how MVC binds a scalar when the same form key appears multiple times.
+        </p>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-success" role="alert">@message</div>
+        }
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">Case A: invalid then valid</h2>
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="age" value="abc" />
+                    <input type="hidden" name="age" value="42" />
+                    <button type="submit" class="btn btn-outline-primary">Post age=abc&age=42</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">Case B: valid then invalid</h2>
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="age" value="42" />
+                    <input type="hidden" name="age" value="abc" />
+                    <button type="submit" class="btn btn-outline-primary">Post age=42&age=abc</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">Current request</h2>
+                <pre class="mb-0">Bound age=[@boundAge]
+Form age values=[@formAgeValues]
+ModelState(age)=[@ageErrors]</pre>
+            </div>
+        </div>
+    </div>
+</div>
