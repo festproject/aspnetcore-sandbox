@@ -22,8 +22,8 @@
           },
           "sourceFileMap": {
             "/Views": "${workspaceFolder}/src/AspNetCoreSandbox.Web/Views"
-          }
+          },
+          "console": "integratedTerminal"
         }
-
     ]
 }
