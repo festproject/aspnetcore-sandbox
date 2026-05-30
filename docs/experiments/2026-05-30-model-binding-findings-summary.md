@@ -52,7 +52,16 @@
 - `age=` と `age=&age=42` は Bound age が null になったが、nullable の `int?` では ModelState(age) に変換エラーは出なかった。
 - `age=abc` のような非数値入力とは違い、空文字は型変換失敗に入らない。
 
-## 6. 実験一覧
+## 6. エラーメッセージの生成経路
+
+結論: 変換には `FirstValue`、エラーメッセージには `ToString()` を使う。
+
+根拠
+- `SimpleTypeModelBinder` は scalar の変換で `valueProviderResult.FirstValue` を使う。
+- `CheckModel` の null エラーは `valueProviderResult.ToString()` を参照する。
+- そのため `age=abc&age=42` のエラーメッセージは `abc,42` になる。
+
+## 7. 実験一覧
 
 - `2026-05-30-model-binding-query-vs-form.md`
 - `2026-05-30-model-binding-route-vs-query.md`
@@ -63,7 +72,8 @@
 - `2026-05-30-model-binding-failure-definitions-required-vs-bindrequired.md`
 - `2026-05-30-model-binding-empty-vs-missing-and-form-duplicate-order.md`
 
-## 7. 今後やるなら
+- `2026-05-30-model-binding-error-message-source-path.md`
 
-- エラーメッセージが `abc,42` になる文字列生成経路（`ValueProviderResult` と binder 内利用箇所）を追跡する。
+## 8. 今後やるなら
+
 - Body（FromBody/JSON）を含めたときの適用範囲と、ValueProvider ベースの挙動との差を整理する。
