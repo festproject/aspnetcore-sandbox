@@ -37,6 +37,15 @@ public class HomeController : Controller
         return View(input);
     }
 
+    [HttpGet("Home/RouteVsQuery/{name?}")]
+    public IActionResult RouteVsQuery(string? name)
+    {
+        ViewData["BoundName"] = name;
+        ViewData["RouteName"] = RouteData.Values["name"]?.ToString();
+        ViewData["QueryName"] = HttpContext.Request.Query["name"].ToString();
+        return View();
+    }
+
     public IActionResult Privacy()
     {
         return View();
