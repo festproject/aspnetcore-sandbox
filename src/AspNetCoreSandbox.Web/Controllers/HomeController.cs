@@ -13,9 +13,28 @@ public class HomeController : Controller
         _logger = logger;
     }
 
-    public IActionResult Index()
+    [HttpGet]
+    public IActionResult Index([FromQuery(Name = "Name")] string? name, [FromQuery(Name = "Age")] int? age, [FromQuery(Name = "Notes")] string? notes)
     {
-        return View();
+        return View(new ModelBindingLabInput
+        {
+            Name = name,
+            Age = age,
+            Notes = notes
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult Index(ModelBindingLabInput input)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(input);
+        }
+
+        ViewData["Message"] = "Model binding succeeded.";
+        return View(input);
     }
 
     public IActionResult Privacy()

@@ -1,8 +1,77 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model ModelBindingLabInput
+
+@{
+    ViewData["Title"] = "Model binding lab";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="mb-4">
+            <h1 class="display-6">Model binding lab</h1>
+            <p class="text-muted mb-0">
+                Use the same form to test query string binding, form post binding, validation, and
+                postback re-rendering.
+            </p>
+        </div>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-success" role="alert">
+                @message
+            </div>
+        }
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" placeholder="Try query string or leading/trailing spaces" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Age" class="form-label"></label>
+                        <input asp-for="Age" class="form-control" type="number" />
+                        <span asp-validation-for="Age" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Bound values</h2>
+                <pre class="mb-0">Name=[@Model.Name]
+Age=[@Model.Age]
+Notes=[@Model.Notes]</pre>
+            </div>
+        </div>
+
+        <div class="mt-4 small text-muted">
+            <p class="mb-1">Try these cases:</p>
+            <ul class="mb-0">
+                <li>Open <code>?Name=QueryName&Age=24</code> and confirm the fields are prefilled.</li>
+                <li>Post a form value with the same name as the query string and confirm the form value wins.</li>
+                <li>Submit <code>Age=abc</code> to see a binding error.</li>
+                <li>Enter leading/trailing spaces in Name to observe that they are preserved.</li>
+            </ul>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
