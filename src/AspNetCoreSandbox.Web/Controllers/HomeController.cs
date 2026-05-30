@@ -82,6 +82,22 @@ public class HomeController : Controller
         return View("NoFallback");
     }
 
+    [HttpGet("Home/EmptyVsMissing/{age?}")]
+    public IActionResult EmptyVsMissing(int? age)
+    {
+        PopulateEmptyVsMissingViewData(age);
+        return View();
+    }
+
+    [HttpPost("Home/EmptyVsMissing/{age?}")]
+    [ValidateAntiForgeryToken]
+    public IActionResult EmptyVsMissingPost(int? age)
+    {
+        PopulateEmptyVsMissingViewData(age);
+        ViewData["Message"] = "Posted.";
+        return View("EmptyVsMissing");
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
@@ -128,6 +144,28 @@ public class HomeController : Controller
         ViewData["RouteAge"] = RouteData.Values["age"]?.ToString() ?? string.Empty;
         ViewData["QueryAge"] = HttpContext.Request.Query["age"].ToString();
         ViewData["FormAge"] = HttpContext.Request.HasFormContentType ? HttpContext.Request.Form["age"].ToString() : string.Empty;
+        ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
+            ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
+            : Array.Empty<string>());
+    }
+
+    private void PopulateEmptyVsMissingViewData(int? age)
+    {
+        ViewData["BoundAge"] = age?.ToString() ?? "(null)";
+        ViewData["RouteAge"] = RouteData.Values["age"]?.ToString() ?? string.Empty;
+        ViewData["QueryAge"] = HttpContext.Request.Query["age"].ToString();
+
+        if (HttpContext.Request.HasFormContentType)
+        {
+            ViewData["HasFormAgeKey"] = HttpContext.Request.Form.ContainsKey("age") ? "true" : "false";
+            ViewData["FormAgeValues"] = string.Join(" | ", HttpContext.Request.Form["age"].AsEnumerable());
+        }
+        else
+        {
+            ViewData["HasFormAgeKey"] = "false";
+            ViewData["FormAgeValues"] = string.Empty;
+        }
+
         ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
             ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
             : Array.Empty<string>());

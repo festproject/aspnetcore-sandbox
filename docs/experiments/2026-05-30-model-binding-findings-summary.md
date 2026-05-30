@@ -43,7 +43,16 @@
 - `[BindRequired]`: キー未送信をバインド段階でエラー化。
 - `[Required]`: null/空値を検証段階でエラー化。
 
-## 5. 実験一覧
+## 5. 空文字と未送信の境界
+
+結論: キー未送信と空文字送信は別扱い。
+
+根拠
+- `age` キー未送信では、Bound age は Route の値になった。
+- `age=` と `age=&age=42` は Bound age が null になったが、nullable の `int?` では ModelState(age) に変換エラーは出なかった。
+- `age=abc` のような非数値入力とは違い、空文字は型変換失敗に入らない。
+
+## 6. 実験一覧
 
 - `2026-05-30-model-binding-query-vs-form.md`
 - `2026-05-30-model-binding-route-vs-query.md`
@@ -52,8 +61,9 @@
 - `2026-05-30-model-binding-duplicate-keys-in-query.md`
 - `2026-05-30-model-binding-duplicate-keys-in-form.md`
 - `2026-05-30-model-binding-failure-definitions-required-vs-bindrequired.md`
+- `2026-05-30-model-binding-empty-vs-missing-and-form-duplicate-order.md`
 
-## 6. 今後やるなら
+## 7. 今後やるなら
 
 - エラーメッセージが `abc,42` になる文字列生成経路（`ValueProviderResult` と binder 内利用箇所）を追跡する。
 - Body（FromBody/JSON）を含めたときの適用範囲と、ValueProvider ベースの挙動との差を整理する。

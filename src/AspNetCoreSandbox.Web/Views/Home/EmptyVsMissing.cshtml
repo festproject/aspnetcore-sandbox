@@ -1,0 +1,89 @@
+@{
+    ViewData["Title"] = "Empty vs Missing (Form)";
+    var postUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">Empty vs Missing (Form)</h1>
+        <p class="text-muted">
+            Open this page with <code>/Home/EmptyVsMissing/123?age=456</code>, then try each submit pattern below.
+        </p>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-info" role="alert">@message</div>
+        }
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Observed values</h2>
+                <pre class="mb-0">Bound age: [@ViewData["BoundAge"]]
+Route age: [@ViewData["RouteAge"]]
+Query age: [@ViewData["QueryAge"]]
+Form has key 'age': [@ViewData["HasFormAgeKey"]]
+Form age values: [@ViewData["FormAgeValues"]]
+ModelState(age): [@ViewData["AgeErrors"]]</pre>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="h6">A. Missing key</h3>
+                        <p class="small text-muted">No age field is posted.</p>
+                        <form method="post" action="@postUrl">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary btn-sm">Submit A</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="h6">B. Empty string only</h3>
+                        <p class="small text-muted">Post age=</p>
+                        <form method="post" action="@postUrl">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="age" value="" />
+                            <button type="submit" class="btn btn-primary btn-sm">Submit B</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="h6">C. Empty then valid</h3>
+                        <p class="small text-muted">Post age=&amp;age=42</p>
+                        <form method="post" action="@postUrl">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="age" value="" />
+                            <input type="hidden" name="age" value="42" />
+                            <button type="submit" class="btn btn-primary btn-sm">Submit C</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="h6">D. Valid then empty</h3>
+                        <p class="small text-muted">Post age=42&amp;age=</p>
+                        <form method="post" action="@postUrl">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="age" value="42" />
+                            <input type="hidden" name="age" value="" />
+                            <button type="submit" class="btn btn-primary btn-sm">Submit D</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
