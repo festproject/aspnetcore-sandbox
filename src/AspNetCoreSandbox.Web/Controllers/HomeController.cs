@@ -98,6 +98,32 @@ public class HomeController : Controller
         return View("EmptyVsMissing");
     }
 
+    [HttpGet("Home/BodyVsRouteQuery/{routeAge?}")]
+    public IActionResult BodyVsRouteQuery(int? routeAge)
+    {
+        ViewData["RouteAge"] = routeAge?.ToString() ?? "(null)";
+        ViewData["QueryAge"] = HttpContext.Request.Query["age"].ToString();
+        return View();
+    }
+
+    [HttpPost("Home/BodyVsRouteQuery/{routeAge?}")]
+    public IActionResult BodyVsRouteQueryPost([FromBody] BodyBindingLabInput? input, int? routeAge)
+    {
+        return Json(new
+        {
+            boundAge = input?.Age?.ToString() ?? "(null)",
+            routeAge = routeAge?.ToString() ?? "(null)",
+            queryAge = HttpContext.Request.Query["age"].ToString(),
+            modelStateErrors = ModelState.Select(static kvp => new
+            {
+                key = kvp.Key,
+                errors = kvp.Value!.Errors.Select(static error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? error.Exception?.Message : error.ErrorMessage)
+                    .Where(static message => !string.IsNullOrWhiteSpace(message))
+                    .ToArray()
+            }).Where(static entry => entry.errors.Length > 0).ToArray()
+        });
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {

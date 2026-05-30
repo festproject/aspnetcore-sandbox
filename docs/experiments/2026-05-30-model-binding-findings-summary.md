@@ -61,7 +61,16 @@
 - `CheckModel` の null エラーは `valueProviderResult.ToString()` を参照する。
 - そのため `age=abc&age=42` のエラーメッセージは `abc,42` になる。
 
-## 7. 実験一覧
+## 7. Body と ValueProvider の分離
+
+結論: `[FromBody]` は input formatter 経由で読み、Form/Route/Query の ValueProvider とは別経路。
+
+根拠
+- `BodyModelBinder` は `BindingSource.Body` に対して `IInputFormatter` を選択する。
+- `BodyModelBinderProvider` は `BindingSource.Body` を受けると body binder を返す。
+- そのため body の `age` は route/query の `age` と競合しても、同じ採用ルールにはならない。
+
+## 8. 実験一覧
 
 - `2026-05-30-model-binding-query-vs-form.md`
 - `2026-05-30-model-binding-route-vs-query.md`
@@ -73,7 +82,8 @@
 - `2026-05-30-model-binding-empty-vs-missing-and-form-duplicate-order.md`
 
 - `2026-05-30-model-binding-error-message-source-path.md`
+- `2026-05-30-model-binding-body-vs-route-query.md`
 
-## 8. 今後やるなら
+## 9. 今後やるなら
 
 - Body（FromBody/JSON）を含めたときの適用範囲と、ValueProvider ベースの挙動との差を整理する。

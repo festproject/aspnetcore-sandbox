@@ -1,0 +1,73 @@
+@{
+    ViewData["Title"] = "Body vs Route/Query";
+    var postUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">Body vs Route/Query</h1>
+        <p class="text-muted">
+            Open this page with <code>/Home/BodyVsRouteQuery/123?age=456</code>, then send JSON bodies and compare the response.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Observed route/query values</h2>
+                <pre class="mb-0">Route age: [@ViewData["RouteAge"]]
+Query age: [@ViewData["QueryAge"]]</pre>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Response</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-body='{"age":42}' data-label="Valid JSON body">
+                Send JSON body { age: 42 }
+            </button>
+            <button type="button" class="btn btn-outline-primary" data-body='' data-label="Empty body">
+                Send empty body
+            </button>
+        </div>
+
+        <div class="small text-muted">
+            <p class="mb-1">Expected:</p>
+            <ul class="mb-0">
+                <li>Body value should bind even when route/query carry different age values.</li>
+                <li>Empty body should produce a body-specific model-state error rather than falling back to route/query.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+            const postUrl = '@postUrl';
+
+            async function sendBody(body) {
+                const response = await fetch(postUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body
+                });
+
+                const payload = await response.json();
+                result.textContent = JSON.stringify(payload, null, 2);
+            }
+
+            document.querySelectorAll('button[data-body]').forEach(button => {
+                button.addEventListener('click', () => {
+                    sendBody(button.dataset.body);
+                });
+            });
+        })();
+    </script>
+}
