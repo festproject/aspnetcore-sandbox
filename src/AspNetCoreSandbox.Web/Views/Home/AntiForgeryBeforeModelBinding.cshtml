@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "AntiForgery validation timing";
+
+    var formFieldName = ViewData["FormFieldName"] as string ?? "__RequestVerificationToken";
+    var headerName = ViewData["HeaderName"] as string ?? "RequestVerificationToken";
+    var requestToken = ViewData["RequestToken"] as string ?? string.Empty;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">AntiForgery validation timing (before model binding)</h1>
+        <p class="text-muted">
+            This lab compares a protected endpoint and an unprotected endpoint with the same invalid payload (<code>age=abc</code>).
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Token metadata</h2>
+                <pre class="mb-0">FormFieldName: [@formFieldName]
+HeaderName: [@headerName]
+RequestToken (prefix): [@(requestToken.Length > 16 ? requestToken[..16] : requestToken)]...</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-scenario="protected-valid">Protected + valid token + age=abc</button>
+            <button type="button" class="btn btn-outline-primary" data-scenario="protected-missing">Protected + missing token + age=abc</button>
+            <button type="button" class="btn btn-outline-danger" data-scenario="protected-invalid">Protected + invalid token + age=abc</button>
+            <button type="button" class="btn btn-secondary" data-scenario="unprotected">Unprotected + no token + age=abc</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Result</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+            const formFieldName = '@formFieldName';
+            const headerName = '@headerName';
+            const token = '@requestToken';
+
+            async function sendScenario(scenario) {
+                const params = new URLSearchParams();
+                params.set('scenario', scenario);
+                params.set('age', 'abc');
+
+                let url = '/Home/AntiForgeryBeforeModelBinding/protected';
+                const headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                };
+
+                if (scenario === 'protected-valid') {
+                    params.set(formFieldName, token);
+                } else if (scenario === 'protected-invalid') {
+                    params.set(formFieldName, 'invalid-token-value');
+                } else if (scenario === 'unprotected') {
+                    url = '/Home/AntiForgeryBeforeModelBinding/unprotected';
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: params.toString()
+                });
+
+                const text = await response.text();
+                const reached = response.headers.get('X-Action-Reached') ?? 'false';
+                result.textContent = 'HTTP ' + response.status + '\n' +
+                    'X-Action-Reached: ' + reached + '\n' +
+                    text;
+            }
+
+            document.querySelectorAll('button[data-scenario]').forEach(button => {
+                button.addEventListener('click', () => {
+                    sendScenario(button.dataset.scenario);
+                });
+            });
+        })();
+    </script>
+}

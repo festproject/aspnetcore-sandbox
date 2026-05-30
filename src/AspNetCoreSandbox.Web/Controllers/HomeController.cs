@@ -222,6 +222,45 @@ public class HomeController : Controller
         }
     }
 
+    [HttpGet("Home/AntiForgeryBeforeModelBinding")]
+    public IActionResult AntiForgeryBeforeModelBinding()
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        ViewData["FormFieldName"] = tokens.FormFieldName;
+        ViewData["HeaderName"] = tokens.HeaderName ?? _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        ViewData["RequestToken"] = tokens.RequestToken ?? string.Empty;
+        return View();
+    }
+
+    [HttpPost("Home/AntiForgeryBeforeModelBinding/protected")]
+    [ValidateAntiForgeryToken]
+    public IActionResult AntiForgeryBeforeModelBindingProtected([FromForm] string? scenario, int? age)
+    {
+        Response.Headers["X-Action-Reached"] = "true";
+        return Json(new
+        {
+            status = 200,
+            protectedEndpoint = true,
+            scenario = scenario ?? string.Empty,
+            boundAge = age?.ToString() ?? "(null)",
+            ageErrors = GetModelErrors("age")
+        });
+    }
+
+    [HttpPost("Home/AntiForgeryBeforeModelBinding/unprotected")]
+    public IActionResult AntiForgeryBeforeModelBindingUnprotected([FromForm] string? scenario, int? age)
+    {
+        Response.Headers["X-Action-Reached"] = "true";
+        return Json(new
+        {
+            status = 200,
+            protectedEndpoint = false,
+            scenario = scenario ?? string.Empty,
+            boundAge = age?.ToString() ?? "(null)",
+            ageErrors = GetModelErrors("age")
+        });
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
@@ -317,6 +356,19 @@ public class HomeController : Controller
         ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
             ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
             : Array.Empty<string>());
+    }
+
+    private string[] GetModelErrors(string key)
+    {
+        if (!ModelState.TryGetValue(key, out var entry))
+        {
+            return Array.Empty<string>();
+        }
+
+        return entry.Errors
+            .Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage)
+            .Where(static message => !string.IsNullOrWhiteSpace(message))
+            .ToArray()!;
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
