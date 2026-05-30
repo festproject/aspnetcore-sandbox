@@ -66,9 +66,36 @@ public class HomeController : Controller
         return View("FormVsRoute");
     }
 
+    [HttpGet("Home/NoFallback/{age?}")]
+    public IActionResult NoFallback(int? age)
+    {
+        PopulateNoFallbackViewData(age);
+        return View();
+    }
+
+    [HttpPost("Home/NoFallback/{age?}")]
+    [ValidateAntiForgeryToken]
+    public IActionResult NoFallbackPost(int? age)
+    {
+        PopulateNoFallbackViewData(age);
+        ViewData["Message"] = "Posted.";
+        return View("NoFallback");
+    }
+
     public IActionResult Privacy()
     {
         return View();
+    }
+
+    private void PopulateNoFallbackViewData(int? age)
+    {
+        ViewData["BoundAge"] = age?.ToString() ?? "(null)";
+        ViewData["RouteAge"] = RouteData.Values["age"]?.ToString() ?? string.Empty;
+        ViewData["QueryAge"] = HttpContext.Request.Query["age"].ToString();
+        ViewData["FormAge"] = HttpContext.Request.HasFormContentType ? HttpContext.Request.Form["age"].ToString() : string.Empty;
+        ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
+            ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
+            : Array.Empty<string>());
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

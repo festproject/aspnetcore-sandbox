@@ -1,0 +1,53 @@
+@{
+    ViewData["Title"] = "No fallback on bind failure";
+    var boundAge = ViewData["BoundAge"]?.ToString();
+    var routeAge = ViewData["RouteAge"]?.ToString();
+    var queryAge = ViewData["QueryAge"]?.ToString();
+    var formAge = ViewData["FormAge"]?.ToString();
+    var ageErrors = ViewData["AgeErrors"]?.ToString();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="display-6 mb-3">No fallback on bind failure</h1>
+        <p class="text-muted">
+            Send conflicting <code>age</code> values from form, route, and query, then confirm that
+            a conversion failure in the first source does not fall through to later sources.
+        </p>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-success" role="alert">@message</div>
+        }
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label for="age" class="form-label">Form age</label>
+                        <input id="age" name="age" class="form-control" value="abc" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">Current request</h2>
+                <pre class="mb-0">Bound age=[@boundAge]
+Form age=[@formAge]
+Route age=[@routeAge]
+Query age=[@queryAge]
+ModelState(age)=[@ageErrors]</pre>
+            </div>
+        </div>
+
+        <div class="small text-muted">
+            <p class="mb-1">Try this URL:</p>
+            <code>/Home/NoFallback/123?age=456</code>
+            <p class="mb-0 mt-2">Then post with the default form value <code>abc</code>.</p>
+        </div>
+    </div>
+</div>
