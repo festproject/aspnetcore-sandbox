@@ -46,6 +46,26 @@ public class HomeController : Controller
         return View();
     }
 
+    [HttpGet("Home/FormVsRoute/{name?}")]
+    public IActionResult FormVsRoute(string? name)
+    {
+        ViewData["BoundName"] = name;
+        ViewData["RouteName"] = RouteData.Values["name"]?.ToString();
+        ViewData["FormName"] = string.Empty;
+        return View();
+    }
+
+    [HttpPost("Home/FormVsRoute/{name?}")]
+    [ValidateAntiForgeryToken]
+    public IActionResult FormVsRoutePost(string? name)
+    {
+        ViewData["BoundName"] = name;
+        ViewData["RouteName"] = RouteData.Values["name"]?.ToString();
+        ViewData["FormName"] = HttpContext.Request.Form["name"].ToString();
+        ViewData["Message"] = "Posted.";
+        return View("FormVsRoute");
+    }
+
     public IActionResult Privacy()
     {
         return View();
