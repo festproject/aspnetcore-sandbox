@@ -1,0 +1,89 @@
+@{
+    ViewData["Title"] = "AntiForgery token source priority";
+
+    var formFieldName = ViewData["FormFieldName"] as string ?? "__RequestVerificationToken";
+    var headerName = ViewData["HeaderName"] as string ?? "RequestVerificationToken";
+    var requestToken = ViewData["RequestToken"] as string ?? string.Empty;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">AntiForgery token source priority</h1>
+        <p class="text-muted">
+            This lab compares header token vs form token behavior on the same POST endpoint.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Current token metadata</h2>
+                <pre class="mb-0">FormFieldName: [@formFieldName]
+HeaderName: [@headerName]
+RequestToken (prefix): [@(requestToken.Length > 16 ? requestToken[..16] : requestToken)]...
+CookieTokenPresent: [@ViewData["CookieTokenPresent"]]</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-scenario="form-only">POST form token only</button>
+            <button type="button" class="btn btn-outline-primary" data-scenario="header-only">POST header token only</button>
+            <button type="button" class="btn btn-outline-secondary" data-scenario="header-valid-form-invalid">POST header valid + form invalid</button>
+            <button type="button" class="btn btn-danger" data-scenario="missing-both">POST no token</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Result</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+
+        <form id="tokenForm" method="post" action="/Home/AntiForgeryTokenSource" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+            const tokenInput = document.querySelector('#tokenForm input[name="@formFieldName"]');
+            const token = tokenInput ? tokenInput.value : '';
+            const formFieldName = '@formFieldName';
+            const headerName = '@headerName';
+
+            async function postScenario(scenario) {
+                const params = new URLSearchParams();
+                params.set('scenario', scenario);
+
+                const headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                };
+
+                if (scenario === 'form-only') {
+                    params.set(formFieldName, token);
+                } else if (scenario === 'header-only') {
+                    headers[headerName] = token;
+                } else if (scenario === 'header-valid-form-invalid') {
+                    headers[headerName] = token;
+                    params.set(formFieldName, 'invalid-token-value');
+                }
+
+                const response = await fetch('/Home/AntiForgeryTokenSource', {
+                    method: 'POST',
+                    headers,
+                    body: params.toString()
+                });
+
+                const text = await response.text();
+                result.textContent = 'HTTP ' + response.status + '\n' + text;
+            }
+
+            document.querySelectorAll('button[data-scenario]').forEach(button => {
+                button.addEventListener('click', () => {
+                    postScenario(button.dataset.scenario);
+                });
+            });
+        })();
+    </script>
+}

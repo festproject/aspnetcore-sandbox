@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using AspNetCoreSandbox.Web.Models;
 
 namespace AspNetCoreSandbox.Web.Controllers;
@@ -7,10 +9,14 @@ namespace AspNetCoreSandbox.Web.Controllers;
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
+    private readonly IAntiforgery _antiforgery;
+    private readonly AntiforgeryOptions _antiforgeryOptions;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(ILogger<HomeController> logger, IAntiforgery antiforgery, IOptions<AntiforgeryOptions> antiforgeryOptions)
     {
         _logger = logger;
+        _antiforgery = antiforgery;
+        _antiforgeryOptions = antiforgeryOptions.Value;
     }
 
     [HttpGet]
@@ -121,6 +127,38 @@ public class HomeController : Controller
                     .Where(static message => !string.IsNullOrWhiteSpace(message))
                     .ToArray()
             }).Where(static entry => entry.errors.Length > 0).ToArray()
+        });
+    }
+
+    [HttpGet("Home/AntiForgeryTokenSource")]
+    public IActionResult AntiForgeryTokenSource()
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        ViewData["FormFieldName"] = tokens.FormFieldName;
+        ViewData["HeaderName"] = tokens.HeaderName ?? _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        ViewData["RequestToken"] = tokens.RequestToken ?? string.Empty;
+        ViewData["CookieTokenPresent"] = string.IsNullOrWhiteSpace(tokens.CookieToken) ? "false" : "true";
+        return View();
+    }
+
+    [HttpPost("Home/AntiForgeryTokenSource")]
+    [ValidateAntiForgeryToken]
+    public IActionResult AntiForgeryTokenSourcePost([FromForm] string? scenario)
+    {
+        var headerName = _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        var formFieldName = _antiforgeryOptions.FormFieldName;
+        var hasHeaderToken = Request.Headers.ContainsKey(headerName);
+        var hasFormToken = Request.HasFormContentType && Request.Form.ContainsKey(formFieldName);
+
+        return Json(new
+        {
+            status = 200,
+            scenario = scenario ?? string.Empty,
+            headerName,
+            formFieldName,
+            hasHeaderToken,
+            hasFormToken,
+            formTokenPreview = hasFormToken ? Request.Form[formFieldName].ToString() : string.Empty
         });
     }
 
