@@ -69,6 +69,8 @@
 - `BodyModelBinder` は `BindingSource.Body` に対して `IInputFormatter` を選択する。
 - `BodyModelBinderProvider` は `BindingSource.Body` を受けると body binder を返す。
 - そのため body の `age` は route/query の `age` と競合しても、同じ採用ルールにはならない。
+- 実験では `{"age":42}` を送ると body の `42` が採用され、route/query の `123` / `456` は上書きしなかった。
+- 空 body では route/query にフォールバックせず、nullable の body モデルは `null` で成功した。
 
 ## 8. 実験一覧
 

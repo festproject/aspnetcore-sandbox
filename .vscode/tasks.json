@@ -29,7 +29,7 @@
             "args": [
                 "run",
                 "--project",
-                "${fileDirname}",
+                "${workspaceFolder}/src/AspNetCoreSandbox.Web/AspNetCoreSandbox.Web.csproj",
                 "--launch-profile",
                 "https"
             ],

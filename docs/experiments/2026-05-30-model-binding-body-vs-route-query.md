@@ -53,17 +53,21 @@ Content-Type: application/json
 - 期待するログ: 空 body でも route/query へのフォールバックは起きない。
 
 ## 6. 観察結果
-- 実際のステータスコード: 未記録
-- 実際のレスポンス: 未記録
-- 実際のログ: 未記録
+- 実際のステータスコード: 200
+- 実際のレスポンス:
+  - `{"age":42}` では `boundAge` が `"42"`、`routeAge` は `"123"`、`queryAge` は `"456"`。
+  - 空 body では `boundAge` が `"(null)"`、`routeAge` は `"123"`、`queryAge` は `"456"`。
+  - どちらも `modelStateErrors` は空。
+- 実際のログ: 未処理例外なし
 - スクリーンショット/ログ保存先: 未記録
 
 ## 7. 判定
-- 仮説 1 の判定（採択/棄却）: 未判定
-- 仮説 2 の判定（採択/棄却）: 未判定
-- 判定理由: 未実施
+- 仮説 1 の判定（採択/棄却）: 採択
+- 仮説 2 の判定（採択/棄却）: 採択
+- 判定理由: JSON body の `age` が route/query と独立して採用され、空 body でも route/query へフォールバックしなかった。空 body は nullable の `int?` では null として成功扱いになった。
 
 ## 8. 学びと次アクション
 - 学び: `BodyModelBinder` は `BindingSource.Body` に対して `IInputFormatter` を使い、ValueProvider 系とは別経路である。
-- 未解決事項: 実際の JSON 応答を手元で確認していない。
-- 次にやること: ブラウザで 2 ボタンを押して結果を記録し、統合サマリーに Body の境界を追記する。
+- 学び: nullable な body モデルでは、空 body がエラーではなく `null` として返るケースがある。
+- 未解決事項: 参照型や非 nullable body モデルで空 body を送ったときの扱い。
+- 次にやること: 必要なら non-nullable body モデルでもう 1 回だけ比較する。
