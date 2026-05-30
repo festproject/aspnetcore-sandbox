@@ -27,7 +27,11 @@
             "command": "dotnet",
             "type": "process",
             "args": [
-                "run"
+                "run",
+                "--project",
+                "${fileDirname}",
+                "--launch-profile",
+                "https"
             ],
             "group": {
                 "kind": "test",
