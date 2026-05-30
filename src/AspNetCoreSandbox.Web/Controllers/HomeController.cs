@@ -93,6 +93,14 @@ public class HomeController : Controller
         return View();
     }
 
+    [HttpGet("Home/FailureDefinitions")]
+    public IActionResult FailureDefinitions([FromQuery] FailureDefinitionsInput input)
+    {
+        TryValidateModel(input);
+        PopulateFailureDefinitionsViewData(input);
+        return View();
+    }
+
     public IActionResult Privacy()
     {
         return View();
@@ -106,6 +114,19 @@ public class HomeController : Controller
         ViewData["FormAge"] = HttpContext.Request.HasFormContentType ? HttpContext.Request.Form["age"].ToString() : string.Empty;
         ViewData["AgeErrors"] = string.Join(" | ", ModelState.TryGetValue("age", out var entry)
             ? entry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
+            : Array.Empty<string>());
+    }
+
+    private void PopulateFailureDefinitionsViewData(FailureDefinitionsInput input)
+    {
+        ViewData["RequiredOnly"] = input.RequiredOnly ?? "(null)";
+        ViewData["BindRequiredOnly"] = input.BindRequiredOnly ?? "(null)";
+        ViewData["Optional"] = input.Optional ?? "(null)";
+        ViewData["RequiredOnlyErrors"] = string.Join(" | ", ModelState.TryGetValue(nameof(FailureDefinitionsInput.RequiredOnly), out var requiredEntry)
+            ? requiredEntry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
+            : Array.Empty<string>());
+        ViewData["BindRequiredOnlyErrors"] = string.Join(" | ", ModelState.TryGetValue(nameof(FailureDefinitionsInput.BindRequiredOnly), out var bindRequiredEntry)
+            ? bindRequiredEntry.Errors.Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage).Where(static m => !string.IsNullOrWhiteSpace(m))
             : Array.Empty<string>());
     }
 
