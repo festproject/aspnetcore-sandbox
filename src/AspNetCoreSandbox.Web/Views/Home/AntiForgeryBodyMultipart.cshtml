@@ -1,0 +1,120 @@
+@{
+    ViewData["Title"] = "AntiForgery body vs multipart";
+
+    var formFieldName = ViewData["FormFieldName"] as string ?? "__RequestVerificationToken";
+    var headerName = ViewData["HeaderName"] as string ?? "RequestVerificationToken";
+    var requestToken = ViewData["RequestToken"] as string ?? string.Empty;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">AntiForgery body vs multipart boundary</h1>
+        <p class="text-muted">
+            Compare token handling across JSON body and multipart/form-data requests.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Token metadata</h2>
+                <pre class="mb-0">FormFieldName: [@formFieldName]
+HeaderName: [@headerName]
+RequestToken (prefix): [@(requestToken.Length > 16 ? requestToken[..16] : requestToken)]...</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-scenario="json-header">JSON + header token</button>
+            <button type="button" class="btn btn-outline-primary" data-scenario="json-body-field">JSON + body token field only</button>
+            <button type="button" class="btn btn-secondary" data-scenario="multipart-form">multipart + form token</button>
+            <button type="button" class="btn btn-outline-secondary" data-scenario="multipart-header">multipart + header token only</button>
+            <button type="button" class="btn btn-danger" data-scenario="multipart-missing">multipart + no token</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Result</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+
+        <form id="tokenForm" method="post" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+            const formFieldName = '@formFieldName';
+            const headerName = '@headerName';
+            const tokenInput = document.querySelector('#tokenForm input[name="@formFieldName"]');
+            const token = tokenInput ? tokenInput.value : '';
+
+            async function runScenario(scenario) {
+                if (scenario === 'json-header' || scenario === 'json-body-field') {
+                    await sendJson(scenario);
+                } else {
+                    await sendMultipart(scenario);
+                }
+            }
+
+            async function sendJson(scenario) {
+                const url = '/Home/AntiForgeryBodyMultipart/json?scenario=' + encodeURIComponent(scenario);
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+
+                const body = {
+                    age: 42
+                };
+
+                if (scenario === 'json-header') {
+                    headers[headerName] = token;
+                } else {
+                    body[formFieldName] = token;
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body)
+                });
+
+                const text = await response.text();
+                result.textContent = 'HTTP ' + response.status + '\n' + text;
+            }
+
+            async function sendMultipart(scenario) {
+                const url = '/Home/AntiForgeryBodyMultipart/multipart';
+                const headers = {};
+                const form = new FormData();
+                form.set('scenario', scenario);
+                form.set('age', '42');
+                form.append('upload', new Blob(['demo file body'], { type: 'text/plain' }), 'demo.txt');
+
+                if (scenario === 'multipart-form') {
+                    form.set(formFieldName, token);
+                } else if (scenario === 'multipart-header') {
+                    headers[headerName] = token;
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: form
+                });
+
+                const text = await response.text();
+                result.textContent = 'HTTP ' + response.status + '\n' + text;
+            }
+
+            document.querySelectorAll('button[data-scenario]').forEach(button => {
+                button.addEventListener('click', () => {
+                    runScenario(button.dataset.scenario);
+                });
+            });
+        })();
+    </script>
+}

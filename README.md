@@ -22,3 +22,4 @@ dotnet new gitignore
 - テンプレート: `docs/experiments/EXPERIMENT_PLAN_TEMPLATE.md`
 - 運用ルール: 1 実験につき 1 ファイルを作成し、手順・期待結果・観察結果を記録する
 - 統合サマリー: `docs/experiments/2026-05-30-model-binding-findings-summary.md`
+- 統合サマリー（AntiForgery）: `docs/experiments/2026-05-30-antiforgery-findings-summary.md`

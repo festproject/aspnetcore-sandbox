@@ -261,6 +261,54 @@ public class HomeController : Controller
         });
     }
 
+    [HttpGet("Home/AntiForgeryBodyMultipart")]
+    public IActionResult AntiForgeryBodyMultipart()
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        ViewData["FormFieldName"] = tokens.FormFieldName;
+        ViewData["HeaderName"] = tokens.HeaderName ?? _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        ViewData["RequestToken"] = tokens.RequestToken ?? string.Empty;
+        return View();
+    }
+
+    [HttpPost("Home/AntiForgeryBodyMultipart/json")]
+    [ValidateAntiForgeryToken]
+    public IActionResult AntiForgeryBodyMultipartJson([FromQuery] string? scenario, [FromBody] BodyBindingLabInput? input)
+    {
+        var headerName = _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+
+        return Json(new
+        {
+            status = 200,
+            kind = "json",
+            scenario = scenario ?? string.Empty,
+            boundAge = input?.Age?.ToString() ?? "(null)",
+            hasHeaderToken = Request.Headers.ContainsKey(headerName),
+            hasFormContentType = Request.HasFormContentType
+        });
+    }
+
+    [HttpPost("Home/AntiForgeryBodyMultipart/multipart")]
+    [ValidateAntiForgeryToken]
+    public IActionResult AntiForgeryBodyMultipartMultipart([FromForm] string? scenario, [FromForm] int? age, IFormFile? upload)
+    {
+        var headerName = _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        var formFieldName = _antiforgeryOptions.FormFieldName;
+        var hasFormToken = Request.HasFormContentType && Request.Form.ContainsKey(formFieldName);
+
+        return Json(new
+        {
+            status = 200,
+            kind = "multipart",
+            scenario = scenario ?? string.Empty,
+            boundAge = age?.ToString() ?? "(null)",
+            hasHeaderToken = Request.Headers.ContainsKey(headerName),
+            hasFormToken,
+            uploadedFileName = upload?.FileName ?? string.Empty,
+            uploadedFileLength = upload?.Length ?? 0
+        });
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
