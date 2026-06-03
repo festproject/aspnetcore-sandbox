@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using AspNetCoreSandbox.Web.Models;
@@ -306,6 +309,85 @@ public class HomeController : Controller
             hasFormToken,
             uploadedFileName = upload?.FileName ?? string.Empty,
             uploadedFileLength = upload?.Length ?? 0
+        });
+    }
+
+    [HttpGet("Home/AntiForgerySignInInvalidation")]
+    public IActionResult AntiForgerySignInInvalidation()
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        ViewData["FormFieldName"] = tokens.FormFieldName;
+        ViewData["HeaderName"] = tokens.HeaderName ?? _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        ViewData["RequestToken"] = tokens.RequestToken ?? string.Empty;
+        ViewData["CurrentUserName"] = User.Identity?.Name ?? "(anonymous)";
+        ViewData["IsAuthenticated"] = User.Identity?.IsAuthenticated == true ? "true" : "false";
+        return View();
+    }
+
+    [HttpPost("Home/AntiForgerySignInInvalidation/mint-token")]
+    public IActionResult AntiForgerySignInInvalidationMintToken([FromForm] string? scenario)
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+
+        return Json(new
+        {
+            status = 200,
+            scenario = scenario ?? string.Empty,
+            requestToken = tokens.RequestToken ?? string.Empty,
+            currentUserName = User.Identity?.Name ?? "(anonymous)",
+            isAuthenticated = User.Identity?.IsAuthenticated == true
+        });
+    }
+
+    [HttpPost("Home/AntiForgerySignInInvalidation/sign-in")]
+    public async Task<IActionResult> AntiForgerySignInInvalidationSignIn([FromForm] string? username)
+    {
+        var effectiveUsername = string.IsNullOrWhiteSpace(username) ? "Alice" : username;
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, effectiveUsername)
+        };
+
+        var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
+
+        return Json(new
+        {
+            status = 200,
+            userName = effectiveUsername,
+            isAuthenticated = true
+        });
+    }
+
+    [HttpPost("Home/AntiForgerySignInInvalidation/sign-out")]
+    public async Task<IActionResult> AntiForgerySignInInvalidationSignOut()
+    {
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+        return Json(new
+        {
+            status = 200,
+            userName = "(anonymous)",
+            isAuthenticated = false
+        });
+    }
+
+    [HttpPost("Home/AntiForgerySignInInvalidation/protected")]
+    [ValidateAntiForgeryToken]
+    public IActionResult AntiForgerySignInInvalidationProtected([FromForm] string? scenario, [FromForm] int? age)
+    {
+        Response.Headers["X-Action-Reached"] = "true";
+
+        return Json(new
+        {
+            status = 200,
+            scenario = scenario ?? string.Empty,
+            currentUserName = User.Identity?.Name ?? "(anonymous)",
+            isAuthenticated = User.Identity?.IsAuthenticated == true,
+            boundAge = age?.ToString() ?? "(null)",
+            ageErrors = GetModelErrors("age")
         });
     }
 

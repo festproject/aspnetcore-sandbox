@@ -1,0 +1,144 @@
+@{
+    ViewData["Title"] = "AntiForgery sign-in invalidation";
+
+    var formFieldName = ViewData["FormFieldName"] as string ?? "__RequestVerificationToken";
+    var headerName = ViewData["HeaderName"] as string ?? "RequestVerificationToken";
+    var requestToken = ViewData["RequestToken"] as string ?? string.Empty;
+    var currentUserName = ViewData["CurrentUserName"] as string ?? "(anonymous)";
+    var isAuthenticated = ViewData["IsAuthenticated"] as string ?? "false";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">AntiForgery sign-in invalidation and username casing</h1>
+        <p class="text-muted">
+            Reproduce token invalidation after <code>SignInAsync</code> and verify case-insensitive username matching.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Current state</h2>
+                <pre id="state" class="mb-0">User: [@currentUserName]
+IsAuthenticated: [@isAuthenticated]
+FormFieldName: [@formFieldName]
+HeaderName: [@headerName]
+RequestToken(prefix): [@(requestToken.Length > 16 ? requestToken[..16] : requestToken)]...</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-outline-primary" data-action="mint-anon">Mint token snapshot (current user)</button>
+            <button type="button" class="btn btn-outline-secondary" data-action="sign-in-Alice">SignInAsync username=Alice</button>
+            <button type="button" class="btn btn-outline-secondary" data-action="sign-in-alice">SignInAsync username=alice</button>
+            <button type="button" class="btn btn-outline-dark" data-action="sign-out">Sign out</button>
+            <button type="button" class="btn btn-primary" data-action="post-snapshot">POST protected with snapshot token + age=abc</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Result</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+
+        <form id="tokenForm" method="post" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+            const state = document.getElementById('state');
+            const formFieldName = '@formFieldName';
+
+            const tokenInput = document.querySelector('#tokenForm input[name="@formFieldName"]');
+            let snapshotToken = tokenInput ? tokenInput.value : '';
+
+            function updateState(payload) {
+                state.textContent = 'User: ' + payload.user + '\n'
+                    + 'IsAuthenticated: ' + payload.auth + '\n'
+                    + 'SnapshotToken(prefix): ' + (snapshotToken ? snapshotToken.slice(0, 16) : '') + '...';
+            }
+
+            async function mintToken(scenario) {
+                const body = new URLSearchParams();
+                body.set('scenario', scenario);
+
+                const response = await fetch('/Home/AntiForgerySignInInvalidation/mint-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: body.toString()
+                });
+
+                const payload = await response.json();
+                snapshotToken = payload.requestToken || '';
+                updateState({ user: payload.currentUserName, auth: payload.isAuthenticated });
+                result.textContent = 'HTTP ' + response.status + '\n' + JSON.stringify(payload, null, 2);
+            }
+
+            async function signIn(username) {
+                const body = new URLSearchParams();
+                body.set('username', username);
+
+                const response = await fetch('/Home/AntiForgerySignInInvalidation/sign-in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: body.toString()
+                });
+
+                const payload = await response.json();
+                updateState({ user: payload.userName, auth: payload.isAuthenticated });
+                result.textContent = 'HTTP ' + response.status + '\n' + JSON.stringify(payload, null, 2);
+            }
+
+            async function signOut() {
+                const response = await fetch('/Home/AntiForgerySignInInvalidation/sign-out', {
+                    method: 'POST'
+                });
+
+                const payload = await response.json();
+                updateState({ user: payload.userName, auth: payload.isAuthenticated });
+                result.textContent = 'HTTP ' + response.status + '\n' + JSON.stringify(payload, null, 2);
+            }
+
+            async function postProtected() {
+                const body = new URLSearchParams();
+                body.set('scenario', 'post-snapshot');
+                body.set('age', 'abc');
+                body.set(formFieldName, snapshotToken);
+
+                const response = await fetch('/Home/AntiForgerySignInInvalidation/protected', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: body.toString()
+                });
+
+                const text = await response.text();
+                const reached = response.headers.get('X-Action-Reached') ?? 'false';
+                result.textContent = 'HTTP ' + response.status + '\nX-Action-Reached: ' + reached + '\n' + text;
+            }
+
+            document.querySelectorAll('button[data-action]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const action = button.dataset.action;
+                    if (action === 'mint-anon') {
+                        await mintToken('mint');
+                    } else if (action === 'sign-in-Alice') {
+                        await signIn('Alice');
+                    } else if (action === 'sign-in-alice') {
+                        await signIn('alice');
+                    } else if (action === 'sign-out') {
+                        await signOut();
+                    } else if (action === 'post-snapshot') {
+                        await postProtected();
+                    }
+                });
+            });
+
+            updateState({ user: '@currentUserName', auth: '@isAuthenticated' });
+        })();
+    </script>
+}
