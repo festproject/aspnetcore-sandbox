@@ -1,0 +1,106 @@
+@{
+    ViewData["Title"] = "AntiForgery path-aware auth";
+
+    var currentPath = ViewData["CurrentPath"] as string ?? string.Empty;
+    var currentUserName = ViewData["CurrentUserName"] as string ?? "(anonymous)";
+    var isAuthenticated = ViewData["IsAuthenticated"] as string ?? "false";
+    var formFieldName = ViewData["FormFieldName"] as string ?? string.Empty;
+    var headerName = ViewData["HeaderName"] as string ?? string.Empty;
+    var requestToken = ViewData["RequestToken"] as string ?? string.Empty;
+    var siteWhoAmIUrl = ViewData["SiteWhoAmIUrl"] as string ?? string.Empty;
+    var adminWhoAmIUrl = ViewData["AdminWhoAmIUrl"] as string ?? string.Empty;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-11">
+        <h1 class="h3 mb-3">FormTagHelper token vs path-selected auth user</h1>
+        <p class="text-muted">
+            The POST forms below rely on FormTagHelper automatic antiforgery token insertion.
+            ValidateRequestAsync then runs with the current user selected by request path.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Current GET context</h2>
+                <pre class="mb-0">Path: @currentPath
+HttpContext.User.Name: @currentUserName
+HttpContext.User.IsAuthenticated: @isAuthenticated
+FormFieldName: @formFieldName
+HeaderName: @headerName
+RequestTokenLength: @requestToken.Length</pre>
+            </div>
+        </div>
+
+        <div class="alert alert-secondary" role="alert">
+            1) First sign in both schemes from <a href="/Home/PathBasedSchemeIsolation">PathBasedSchemeIsolation</a>.
+            2) Open this page under <code>/Home</code> and submit both forms.
+            3) Open the same page under <code>/admin</code> and submit both forms.
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="h6">POST to Home endpoint (manual validate)</h2>
+                        <form method="post" asp-controller="Home" asp-action="AntiForgeryPathAwareAuthValidateHome" asp-antiforgery="true">
+                            <input type="hidden" name="scenario" value="token-from-current-page-to-home" />
+                            <button type="submit" class="btn btn-outline-primary">Submit to /Home</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h2 class="h6">POST to Admin endpoint (manual validate)</h2>
+                        <form method="post" asp-controller="Home" asp-action="AntiForgeryPathAwareAuthValidateAdmin" asp-antiforgery="true">
+                            <input type="hidden" name="scenario" value="token-from-current-page-to-admin" />
+                            <button type="submit" class="btn btn-outline-danger">Submit to /admin</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card h-100 border-primary-subtle">
+                    <div class="card-body">
+                        <h2 class="h6">POST to Home endpoint ([ValidateAntiForgeryToken])</h2>
+                        <form method="post" asp-controller="Home" asp-action="AntiForgeryPathAwareAuthValidateHomeAttribute" asp-antiforgery="true">
+                            <input type="hidden" name="scenario" value="token-from-current-page-to-home-attribute" />
+                            <button type="submit" class="btn btn-primary">Submit to /Home (attribute)</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100 border-danger-subtle">
+                    <div class="card-body">
+                        <h2 class="h6">POST to Admin endpoint ([ValidateAntiForgeryToken])</h2>
+                        <form method="post" asp-controller="Home" asp-action="AntiForgeryPathAwareAuthValidateAdminAttribute" asp-antiforgery="true">
+                            <input type="hidden" name="scenario" value="token-from-current-page-to-admin-attribute" />
+                            <button type="submit" class="btn btn-danger">Submit to /admin (attribute)</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h2 class="h5">WhoAmI quick links</h2>
+                <ul class="mb-0">
+                    <li><a href="@siteWhoAmIUrl">@siteWhoAmIUrl</a></li>
+                    <li><a href="@adminWhoAmIUrl">@adminWhoAmIUrl</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-link" href="/Home/AntiForgeryPathAwareAuth">Open under /Home</a>
+            <a class="btn btn-sm btn-link" href="/admin/antiforgery-path-lab">Open under /admin</a>
+            <a class="btn btn-sm btn-link" href="/Home/PathBasedSchemeIsolation">Back to scheme lab</a>
+        </div>
+    </div>
+</div>

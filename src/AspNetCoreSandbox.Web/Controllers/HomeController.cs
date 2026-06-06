@@ -677,6 +677,46 @@ public class HomeController : Controller
         });
     }
 
+    [HttpGet("Home/AntiForgeryPathAwareAuth")]
+    public IActionResult AntiForgeryPathAwareAuth()
+    {
+        PopulateAntiForgeryPathAwareAuthViewData();
+        return View();
+    }
+
+    [HttpGet("admin/antiforgery-path-lab")]
+    public IActionResult AntiForgeryPathAwareAuthAdmin()
+    {
+        PopulateAntiForgeryPathAwareAuthViewData();
+        return View("AntiForgeryPathAwareAuth");
+    }
+
+    [HttpPost("Home/AntiForgeryPathAwareAuth/validate-home")]
+    public Task<IActionResult> AntiForgeryPathAwareAuthValidateHome([FromForm] string? scenario)
+    {
+        return ValidateAntiForgeryPathAwareAuthCoreAsync(scenario ?? string.Empty, "home");
+    }
+
+    [HttpPost("admin/antiforgery-path-lab/validate-admin")]
+    public Task<IActionResult> AntiForgeryPathAwareAuthValidateAdmin([FromForm] string? scenario)
+    {
+        return ValidateAntiForgeryPathAwareAuthCoreAsync(scenario ?? string.Empty, "admin");
+    }
+
+    [HttpPost("Home/AntiForgeryPathAwareAuth/validate-home-attribute")]
+    [ValidateAntiForgeryToken]
+    public Task<IActionResult> AntiForgeryPathAwareAuthValidateHomeAttribute([FromForm] string? scenario)
+    {
+        return BuildAttributeValidatedAntiForgeryPathAwareAuthResultAsync(scenario ?? string.Empty, "home");
+    }
+
+    [HttpPost("admin/antiforgery-path-lab/validate-admin-attribute")]
+    [ValidateAntiForgeryToken]
+    public Task<IActionResult> AntiForgeryPathAwareAuthValidateAdminAttribute([FromForm] string? scenario)
+    {
+        return BuildAttributeValidatedAntiForgeryPathAwareAuthResultAsync(scenario ?? string.Empty, "admin");
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
@@ -836,6 +876,151 @@ public class HomeController : Controller
                 succeeded = adminAuth.Succeeded,
                 userName = adminAuth.Principal?.Identity?.Name ?? "(anonymous)",
                 isAuthenticated = adminAuth.Principal?.Identity?.IsAuthenticated == true
+            }
+        });
+    }
+
+    private void PopulateAntiForgeryPathAwareAuthViewData()
+    {
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+
+        ViewData["CurrentPath"] = HttpContext.Request.Path.ToString();
+        ViewData["CurrentUserName"] = User.Identity?.Name ?? "(anonymous)";
+        ViewData["IsAuthenticated"] = User.Identity?.IsAuthenticated == true ? "true" : "false";
+        ViewData["FormFieldName"] = tokens.FormFieldName;
+        ViewData["HeaderName"] = tokens.HeaderName ?? _antiforgeryOptions.HeaderName ?? "RequestVerificationToken";
+        ViewData["RequestToken"] = tokens.RequestToken ?? string.Empty;
+        ViewData["SiteWhoAmIUrl"] = "/Home/PathBasedSchemeIsolation/whoami";
+        ViewData["AdminWhoAmIUrl"] = "/admin/scheme-lab/whoami";
+    }
+
+    private async Task<IActionResult> ValidateAntiForgeryPathAwareAuthCoreAsync(string scenario, string expectedPathKind)
+    {
+        var currentAuth = await HttpContext.AuthenticateAsync();
+        var siteAuth = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        var adminAuth = await HttpContext.AuthenticateAsync(AdminCookieScheme);
+
+        var formFieldName = _antiforgeryOptions.FormFieldName;
+        var tokenInForm = Request.HasFormContentType && Request.Form.ContainsKey(formFieldName);
+        var requestToken = tokenInForm ? Request.Form[formFieldName].ToString() : string.Empty;
+
+        try
+        {
+            await _antiforgery.ValidateRequestAsync(HttpContext);
+
+            return Json(new
+            {
+                status = 200,
+                scenario,
+                expectedPathKind,
+                requestPath = HttpContext.Request.Path.ToString(),
+                valid = true,
+                message = "ValidateRequestAsync succeeded.",
+                tokenInForm,
+                requestTokenLength = requestToken.Length,
+                httpContextUser = new
+                {
+                    userName = User.Identity?.Name ?? "(anonymous)",
+                    isAuthenticated = User.Identity?.IsAuthenticated == true
+                },
+                currentDefaultAuthenticate = new
+                {
+                    succeeded = currentAuth.Succeeded,
+                    userName = currentAuth.Principal?.Identity?.Name ?? "(anonymous)",
+                    authenticationType = currentAuth.Principal?.Identity?.AuthenticationType ?? string.Empty
+                },
+                siteSchemeAuthenticate = new
+                {
+                    succeeded = siteAuth.Succeeded,
+                    userName = siteAuth.Principal?.Identity?.Name ?? "(anonymous)"
+                },
+                adminSchemeAuthenticate = new
+                {
+                    succeeded = adminAuth.Succeeded,
+                    userName = adminAuth.Principal?.Identity?.Name ?? "(anonymous)"
+                }
+            });
+        }
+        catch (AntiforgeryValidationException ex)
+        {
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+
+            return Json(new
+            {
+                status = 400,
+                scenario,
+                expectedPathKind,
+                requestPath = HttpContext.Request.Path.ToString(),
+                valid = false,
+                message = ex.Message,
+                tokenInForm,
+                requestTokenLength = requestToken.Length,
+                httpContextUser = new
+                {
+                    userName = User.Identity?.Name ?? "(anonymous)",
+                    isAuthenticated = User.Identity?.IsAuthenticated == true
+                },
+                currentDefaultAuthenticate = new
+                {
+                    succeeded = currentAuth.Succeeded,
+                    userName = currentAuth.Principal?.Identity?.Name ?? "(anonymous)",
+                    authenticationType = currentAuth.Principal?.Identity?.AuthenticationType ?? string.Empty
+                },
+                siteSchemeAuthenticate = new
+                {
+                    succeeded = siteAuth.Succeeded,
+                    userName = siteAuth.Principal?.Identity?.Name ?? "(anonymous)"
+                },
+                adminSchemeAuthenticate = new
+                {
+                    succeeded = adminAuth.Succeeded,
+                    userName = adminAuth.Principal?.Identity?.Name ?? "(anonymous)"
+                }
+            });
+        }
+    }
+
+    private async Task<IActionResult> BuildAttributeValidatedAntiForgeryPathAwareAuthResultAsync(string scenario, string expectedPathKind)
+    {
+        var currentAuth = await HttpContext.AuthenticateAsync();
+        var siteAuth = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        var adminAuth = await HttpContext.AuthenticateAsync(AdminCookieScheme);
+
+        var formFieldName = _antiforgeryOptions.FormFieldName;
+        var tokenInForm = Request.HasFormContentType && Request.Form.ContainsKey(formFieldName);
+        var requestToken = tokenInForm ? Request.Form[formFieldName].ToString() : string.Empty;
+
+        return Json(new
+        {
+            status = 200,
+            scenario,
+            expectedPathKind,
+            requestPath = HttpContext.Request.Path.ToString(),
+            validationMode = "[ValidateAntiForgeryToken] attribute",
+            valid = true,
+            message = "Action reached. Validation was performed by ValidateAntiForgeryTokenAuthorizationFilter.",
+            tokenInForm,
+            requestTokenLength = requestToken.Length,
+            httpContextUser = new
+            {
+                userName = User.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = User.Identity?.IsAuthenticated == true
+            },
+            currentDefaultAuthenticate = new
+            {
+                succeeded = currentAuth.Succeeded,
+                userName = currentAuth.Principal?.Identity?.Name ?? "(anonymous)",
+                authenticationType = currentAuth.Principal?.Identity?.AuthenticationType ?? string.Empty
+            },
+            siteSchemeAuthenticate = new
+            {
+                succeeded = siteAuth.Succeeded,
+                userName = siteAuth.Principal?.Identity?.Name ?? "(anonymous)"
+            },
+            adminSchemeAuthenticate = new
+            {
+                succeeded = adminAuth.Succeeded,
+                userName = adminAuth.Principal?.Identity?.Name ?? "(anonymous)"
             }
         });
     }

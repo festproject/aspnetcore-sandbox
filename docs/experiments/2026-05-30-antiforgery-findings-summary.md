@@ -48,6 +48,7 @@
 - `2026-05-30-antiforgery-body-vs-multipart-boundary.md`
 - `2026-06-03-antiforgery-signin-invalidation-and-username-casing.md`
 - `2026-06-06-antiforgery-signinasync-user-propagation-and-cookie-unprotect.md`
+- `2026-06-06-antiforgery-token-binding-with-path-based-auth-schemes.md`
 
 ## 6. 次にやるなら
 
