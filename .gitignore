@@ -485,6 +485,8 @@ $RECYCLE.BIN/
 
 # SQLite database files
 *.db
+*.db-shm
+*.db-wal
 
 # Playwright MCP files
 .playwright-mcp/
