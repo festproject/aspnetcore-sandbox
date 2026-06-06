@@ -456,6 +456,54 @@ public class HomeController : Controller
         });
     }
 
+    [HttpPost("Home/AuthCookieIntrospection/sign-in-result")]
+    public async Task<IActionResult> AuthCookieIntrospectionSignInResult([FromForm] string? username)
+    {
+        var effectiveUsername = string.IsNullOrWhiteSpace(username) ? "Alice" : username;
+        var beforeUser = User.Identity?.Name ?? "(anonymous)";
+        var beforeIsAuthenticated = User.Identity?.IsAuthenticated == true;
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, effectiveUsername),
+            new Claim(ClaimTypes.NameIdentifier, $"id:{effectiveUsername}")
+        };
+
+        var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        var signInResult = SignIn(principal, IdentityConstants.ApplicationScheme);
+        await signInResult.ExecuteResultAsync(ControllerContext);
+
+        var afterUser = User.Identity?.Name ?? "(anonymous)";
+        var afterIsAuthenticated = User.Identity?.IsAuthenticated == true;
+        var authResult = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+
+        return Json(new
+        {
+            status = 200,
+            requestedUserName = effectiveUsername,
+            execution = "Controller.SignIn(...).ExecuteResultAsync",
+            before = new
+            {
+                userName = beforeUser,
+                isAuthenticated = beforeIsAuthenticated
+            },
+            after = new
+            {
+                userName = afterUser,
+                isAuthenticated = afterIsAuthenticated
+            },
+            authenticateAsyncAfterSignIn = new
+            {
+                succeeded = authResult.Succeeded,
+                userName = authResult.Principal?.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = authResult.Principal?.Identity?.IsAuthenticated == true
+            },
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
     [HttpPost("Home/AuthCookieIntrospection/sign-out")]
     public async Task<IActionResult> AuthCookieIntrospectionSignOut()
     {

@@ -11,7 +11,7 @@
     <div class="col-lg-10">
         <h1 class="h3 mb-3">SignIn propagation and auth cookie decode</h1>
         <p class="text-muted">
-            Verify whether <code>SignInAsync</code> changes <code>HttpContext.User</code> in the same request,
+            Verify whether <code>SignInAsync</code> or <code>Controller.SignIn</code> changes <code>HttpContext.User</code> in the same request,
             and decode encrypted auth cookie claims via server-side <code>Unprotect</code>.
         </p>
 
@@ -29,6 +29,8 @@ CookieName: @cookieName</pre>
             <button type="button" class="btn btn-outline-secondary" id="signOutButton">Sign out</button>
             <button type="button" class="btn btn-outline-primary" id="signInAliceButton">SignInAsync(Alice)</button>
             <button type="button" class="btn btn-outline-primary" id="signInaliceButton">SignInAsync(alice)</button>
+            <button type="button" class="btn btn-outline-info" id="signInResultAliceButton">SignIn(Alice)</button>
+            <button type="button" class="btn btn-outline-info" id="signInResultaliceButton">SignIn(alice)</button>
             <button type="button" class="btn btn-outline-dark" id="whoamiButton">WhoAmI (next request)</button>
             <button type="button" class="btn btn-success" id="decodeCookieButton">Decode current cookie</button>
         </div>
@@ -90,6 +92,14 @@ CookieName: @cookieName</pre>
 
             document.getElementById('signInaliceButton').addEventListener('click', async () => {
                 await postForm('/Home/AuthCookieIntrospection/sign-in', { username: 'alice' });
+            });
+
+            document.getElementById('signInResultAliceButton').addEventListener('click', async () => {
+                await postForm('/Home/AuthCookieIntrospection/sign-in-result', { username: 'Alice' });
+            });
+
+            document.getElementById('signInResultaliceButton').addEventListener('click', async () => {
+                await postForm('/Home/AuthCookieIntrospection/sign-in-result', { username: 'alice' });
             });
 
             document.getElementById('whoamiButton').addEventListener('click', async () => {
