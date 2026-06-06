@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using AspNetCoreSandbox.Web.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+const string AdminCookieScheme = "AdminCookieScheme";
+const string PathAwareCookieScheme = "PathAwareCookieScheme";
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -12,6 +14,24 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = PathAwareCookieScheme;
+        options.DefaultChallengeScheme = PathAwareCookieScheme;
+    })
+    .AddPolicyScheme(PathAwareCookieScheme, PathAwareCookieScheme, options =>
+    {
+        options.ForwardDefaultSelector = context =>
+            context.Request.Path.StartsWithSegments("/admin") ? AdminCookieScheme : IdentityConstants.ApplicationScheme;
+    })
+    .AddCookie(AdminCookieScheme, options =>
+    {
+        options.Cookie.Name = "AspNetCoreSandbox.AdminAuth";
+        options.LoginPath = "/admin/scheme-lab";
+        options.AccessDeniedPath = "/admin/scheme-lab";
+    });
+
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();

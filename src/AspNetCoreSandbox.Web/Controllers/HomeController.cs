@@ -12,6 +12,7 @@ namespace AspNetCoreSandbox.Web.Controllers;
 
 public class HomeController : Controller
 {
+    private const string AdminCookieScheme = "AdminCookieScheme";
     private readonly ILogger<HomeController> _logger;
     private readonly IAntiforgery _antiforgery;
     private readonly AntiforgeryOptions _antiforgeryOptions;
@@ -579,6 +580,103 @@ public class HomeController : Controller
         });
     }
 
+    [HttpGet("Home/PathBasedSchemeIsolation")]
+    public IActionResult PathBasedSchemeIsolation()
+    {
+        PopulatePathBasedSchemeIsolationViewData();
+        return View();
+    }
+
+    [HttpGet("admin/scheme-lab")]
+    public IActionResult PathBasedSchemeIsolationAdmin()
+    {
+        PopulatePathBasedSchemeIsolationViewData();
+        return View("PathBasedSchemeIsolation");
+    }
+
+    [HttpGet("Home/PathBasedSchemeIsolation/whoami")]
+    public Task<IActionResult> PathBasedSchemeIsolationWhoAmI()
+    {
+        return BuildPathBasedIdentitySnapshotAsync();
+    }
+
+    [HttpGet("admin/scheme-lab/whoami")]
+    public Task<IActionResult> PathBasedSchemeIsolationAdminWhoAmI()
+    {
+        return BuildPathBasedIdentitySnapshotAsync();
+    }
+
+    [HttpPost("Home/PathBasedSchemeIsolation/sign-in-site")]
+    public async Task<IActionResult> PathBasedSchemeIsolationSignInSite([FromForm] string? username)
+    {
+        var effectiveUsername = string.IsNullOrWhiteSpace(username) ? "SiteAlice" : username;
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, effectiveUsername),
+            new Claim(ClaimTypes.NameIdentifier, $"site:{effectiveUsername}")
+        };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme));
+
+        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
+
+        return Json(new
+        {
+            status = 200,
+            signedInScheme = IdentityConstants.ApplicationScheme,
+            signedInUser = effectiveUsername,
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
+    [HttpPost("Home/PathBasedSchemeIsolation/sign-in-admin")]
+    public async Task<IActionResult> PathBasedSchemeIsolationSignInAdmin([FromForm] string? username)
+    {
+        var effectiveUsername = string.IsNullOrWhiteSpace(username) ? "AdminBob" : username;
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, effectiveUsername),
+            new Claim(ClaimTypes.NameIdentifier, $"admin:{effectiveUsername}"),
+            new Claim(ClaimTypes.Role, "Administrator")
+        };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, AdminCookieScheme));
+
+        await HttpContext.SignInAsync(AdminCookieScheme, principal);
+
+        return Json(new
+        {
+            status = 200,
+            signedInScheme = AdminCookieScheme,
+            signedInUser = effectiveUsername,
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
+    [HttpPost("Home/PathBasedSchemeIsolation/sign-out-site")]
+    public async Task<IActionResult> PathBasedSchemeIsolationSignOutSite()
+    {
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+        return Json(new
+        {
+            status = 200,
+            signedOutScheme = IdentityConstants.ApplicationScheme,
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
+    [HttpPost("Home/PathBasedSchemeIsolation/sign-out-admin")]
+    public async Task<IActionResult> PathBasedSchemeIsolationSignOutAdmin()
+    {
+        await HttpContext.SignOutAsync(AdminCookieScheme);
+
+        return Json(new
+        {
+            status = 200,
+            signedOutScheme = AdminCookieScheme,
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
@@ -687,6 +785,59 @@ public class HomeController : Controller
             .Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage)
             .Where(static message => !string.IsNullOrWhiteSpace(message))
             .ToArray()!;
+    }
+
+    private void PopulatePathBasedSchemeIsolationViewData()
+    {
+        var siteOptions = _cookieOptionsMonitor.Get(IdentityConstants.ApplicationScheme);
+        var adminOptions = _cookieOptionsMonitor.Get(AdminCookieScheme);
+
+        ViewData["CurrentPath"] = HttpContext.Request.Path.ToString();
+        ViewData["CurrentUserName"] = User.Identity?.Name ?? "(anonymous)";
+        ViewData["IsAuthenticated"] = User.Identity?.IsAuthenticated == true ? "true" : "false";
+        ViewData["SiteScheme"] = IdentityConstants.ApplicationScheme;
+        ViewData["AdminScheme"] = AdminCookieScheme;
+        ViewData["SiteCookieName"] = siteOptions.Cookie.Name ?? string.Empty;
+        ViewData["AdminCookieName"] = adminOptions.Cookie.Name ?? string.Empty;
+    }
+
+    private async Task<IActionResult> BuildPathBasedIdentitySnapshotAsync()
+    {
+        var currentAuth = await HttpContext.AuthenticateAsync();
+        var siteAuth = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+        var adminAuth = await HttpContext.AuthenticateAsync(AdminCookieScheme);
+
+        return Json(new
+        {
+            status = 200,
+            requestPath = HttpContext.Request.Path.ToString(),
+            httpContextUser = new
+            {
+                userName = User.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = User.Identity?.IsAuthenticated == true
+            },
+            currentDefaultAuthenticate = new
+            {
+                succeeded = currentAuth.Succeeded,
+                userName = currentAuth.Principal?.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = currentAuth.Principal?.Identity?.IsAuthenticated == true,
+                authenticationType = currentAuth.Principal?.Identity?.AuthenticationType ?? string.Empty
+            },
+            siteSchemeAuthenticate = new
+            {
+                scheme = IdentityConstants.ApplicationScheme,
+                succeeded = siteAuth.Succeeded,
+                userName = siteAuth.Principal?.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = siteAuth.Principal?.Identity?.IsAuthenticated == true
+            },
+            adminSchemeAuthenticate = new
+            {
+                scheme = AdminCookieScheme,
+                succeeded = adminAuth.Succeeded,
+                userName = adminAuth.Principal?.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = adminAuth.Principal?.Identity?.IsAuthenticated == true
+            }
+        });
     }
 
     private object DecodeCurrentAuthCookie()
