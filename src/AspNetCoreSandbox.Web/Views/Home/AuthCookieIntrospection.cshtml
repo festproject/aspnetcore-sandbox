@@ -1,0 +1,109 @@
+@{
+    ViewData["Title"] = "Auth cookie introspection";
+
+    var currentUserName = ViewData["CurrentUserName"] as string ?? "(anonymous)";
+    var isAuthenticated = ViewData["IsAuthenticated"] as string ?? "false";
+    var cookieName = ViewData["CookieName"] as string ?? string.Empty;
+    var scheme = ViewData["Scheme"] as string ?? string.Empty;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <h1 class="h3 mb-3">SignIn propagation and auth cookie decode</h1>
+        <p class="text-muted">
+            Verify whether <code>SignInAsync</code> changes <code>HttpContext.User</code> in the same request,
+            and decode encrypted auth cookie claims via server-side <code>Unprotect</code>.
+        </p>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Current state</h2>
+                <pre id="state" class="mb-0">CurrentUser: @currentUserName
+IsAuthenticated: @isAuthenticated
+Scheme: @scheme
+CookieName: @cookieName</pre>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-outline-secondary" id="signOutButton">Sign out</button>
+            <button type="button" class="btn btn-outline-primary" id="signInAliceButton">SignInAsync(Alice)</button>
+            <button type="button" class="btn btn-outline-primary" id="signInaliceButton">SignInAsync(alice)</button>
+            <button type="button" class="btn btn-outline-dark" id="whoamiButton">WhoAmI (next request)</button>
+            <button type="button" class="btn btn-success" id="decodeCookieButton">Decode current cookie</button>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5">Decode raw cookie value (optional)</h2>
+                <div class="mb-2">
+                    <textarea id="rawCookieInput" class="form-control" rows="3" placeholder="Paste cookie value and click decode"></textarea>
+                </div>
+                <button type="button" class="btn btn-outline-success" id="decodeRawButton">Decode raw cookie string</button>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Result</h2>
+                <pre id="result" class="mb-0">No request sent yet.</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const result = document.getElementById('result');
+
+            function show(status, payload) {
+                result.textContent = 'HTTP ' + status + '\n' + JSON.stringify(payload, null, 2);
+            }
+
+            async function postForm(url, bodyObj) {
+                const body = new URLSearchParams();
+                Object.keys(bodyObj).forEach(key => body.set(key, bodyObj[key] ?? ''));
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                    body: body.toString()
+                });
+
+                const payload = await response.json();
+                show(response.status, payload);
+            }
+
+            async function getJson(url) {
+                const response = await fetch(url);
+                const payload = await response.json();
+                show(response.status, payload);
+            }
+
+            document.getElementById('signOutButton').addEventListener('click', async () => {
+                await postForm('/Home/AuthCookieIntrospection/sign-out', {});
+            });
+
+            document.getElementById('signInAliceButton').addEventListener('click', async () => {
+                await postForm('/Home/AuthCookieIntrospection/sign-in', { username: 'Alice' });
+            });
+
+            document.getElementById('signInaliceButton').addEventListener('click', async () => {
+                await postForm('/Home/AuthCookieIntrospection/sign-in', { username: 'alice' });
+            });
+
+            document.getElementById('whoamiButton').addEventListener('click', async () => {
+                await getJson('/Home/AuthCookieIntrospection/whoami');
+            });
+
+            document.getElementById('decodeCookieButton').addEventListener('click', async () => {
+                await getJson('/Home/AuthCookieIntrospection/decode-current-cookie');
+            });
+
+            document.getElementById('decodeRawButton').addEventListener('click', async () => {
+                const rawCookieValue = document.getElementById('rawCookieInput').value;
+                await postForm('/Home/AuthCookieIntrospection/decode-raw-cookie', { cookieValue: rawCookieValue });
+            });
+        })();
+    </script>
+}

@@ -46,6 +46,8 @@
 - `2026-05-30-antiforgery-missing-vs-invalid-token.md`
 - `2026-05-30-antiforgery-validation-timing-before-model-binding.md`
 - `2026-05-30-antiforgery-body-vs-multipart-boundary.md`
+- `2026-06-03-antiforgery-signin-invalidation-and-username-casing.md`
+- `2026-06-06-antiforgery-signinasync-user-propagation-and-cookie-unprotect.md`
 
 ## 6. 次にやるなら
 

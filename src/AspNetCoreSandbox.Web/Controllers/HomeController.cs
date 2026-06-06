@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -14,12 +15,18 @@ public class HomeController : Controller
     private readonly ILogger<HomeController> _logger;
     private readonly IAntiforgery _antiforgery;
     private readonly AntiforgeryOptions _antiforgeryOptions;
+    private readonly IOptionsMonitor<CookieAuthenticationOptions> _cookieOptionsMonitor;
 
-    public HomeController(ILogger<HomeController> logger, IAntiforgery antiforgery, IOptions<AntiforgeryOptions> antiforgeryOptions)
+    public HomeController(
+        ILogger<HomeController> logger,
+        IAntiforgery antiforgery,
+        IOptions<AntiforgeryOptions> antiforgeryOptions,
+        IOptionsMonitor<CookieAuthenticationOptions> cookieOptionsMonitor)
     {
         _logger = logger;
         _antiforgery = antiforgery;
         _antiforgeryOptions = antiforgeryOptions.Value;
+        _cookieOptionsMonitor = cookieOptionsMonitor;
     }
 
     [HttpGet]
@@ -391,6 +398,139 @@ public class HomeController : Controller
         });
     }
 
+    [HttpGet("Home/AuthCookieIntrospection")]
+    public IActionResult AuthCookieIntrospection()
+    {
+        var scheme = IdentityConstants.ApplicationScheme;
+        var options = _cookieOptionsMonitor.Get(scheme);
+        ViewData["CurrentUserName"] = User.Identity?.Name ?? "(anonymous)";
+        ViewData["IsAuthenticated"] = User.Identity?.IsAuthenticated == true ? "true" : "false";
+        ViewData["CookieName"] = options.Cookie.Name ?? string.Empty;
+        ViewData["Scheme"] = scheme;
+        return View();
+    }
+
+    [HttpPost("Home/AuthCookieIntrospection/sign-in")]
+    public async Task<IActionResult> AuthCookieIntrospectionSignIn([FromForm] string? username)
+    {
+        var effectiveUsername = string.IsNullOrWhiteSpace(username) ? "Alice" : username;
+        var beforeUser = User.Identity?.Name ?? "(anonymous)";
+        var beforeIsAuthenticated = User.Identity?.IsAuthenticated == true;
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, effectiveUsername),
+            new Claim(ClaimTypes.NameIdentifier, $"id:{effectiveUsername}")
+        };
+
+        var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, principal);
+
+        var afterUser = User.Identity?.Name ?? "(anonymous)";
+        var afterIsAuthenticated = User.Identity?.IsAuthenticated == true;
+        var authResult = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+
+        return Json(new
+        {
+            status = 200,
+            requestedUserName = effectiveUsername,
+            before = new
+            {
+                userName = beforeUser,
+                isAuthenticated = beforeIsAuthenticated
+            },
+            after = new
+            {
+                userName = afterUser,
+                isAuthenticated = afterIsAuthenticated
+            },
+            authenticateAsyncAfterSignIn = new
+            {
+                succeeded = authResult.Succeeded,
+                userName = authResult.Principal?.Identity?.Name ?? "(anonymous)",
+                isAuthenticated = authResult.Principal?.Identity?.IsAuthenticated == true
+            },
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
+    [HttpPost("Home/AuthCookieIntrospection/sign-out")]
+    public async Task<IActionResult> AuthCookieIntrospectionSignOut()
+    {
+        var beforeUser = User.Identity?.Name ?? "(anonymous)";
+        var beforeIsAuthenticated = User.Identity?.IsAuthenticated == true;
+
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+        var afterUser = User.Identity?.Name ?? "(anonymous)";
+        var afterIsAuthenticated = User.Identity?.IsAuthenticated == true;
+
+        return Json(new
+        {
+            status = 200,
+            before = new
+            {
+                userName = beforeUser,
+                isAuthenticated = beforeIsAuthenticated
+            },
+            after = new
+            {
+                userName = afterUser,
+                isAuthenticated = afterIsAuthenticated
+            },
+            responseSetCookieCount = Response.Headers.SetCookie.Count
+        });
+    }
+
+    [HttpGet("Home/AuthCookieIntrospection/whoami")]
+    public IActionResult AuthCookieIntrospectionWhoAmI()
+    {
+        return Json(new
+        {
+            status = 200,
+            userName = User.Identity?.Name ?? "(anonymous)",
+            isAuthenticated = User.Identity?.IsAuthenticated == true
+        });
+    }
+
+    [HttpGet("Home/AuthCookieIntrospection/decode-current-cookie")]
+    public IActionResult AuthCookieIntrospectionDecodeCurrentCookie()
+    {
+        var cookieInfo = DecodeCurrentAuthCookie();
+        return Json(new
+        {
+            status = 200,
+            cookieInfo
+        });
+    }
+
+    [HttpPost("Home/AuthCookieIntrospection/decode-raw-cookie")]
+    public IActionResult AuthCookieIntrospectionDecodeRawCookie([FromForm] string? cookieValue)
+    {
+        var scheme = IdentityConstants.ApplicationScheme;
+        var options = _cookieOptionsMonitor.Get(scheme);
+        var ticketDataFormat = options.TicketDataFormat;
+        var decodedValue = Uri.UnescapeDataString(cookieValue ?? string.Empty);
+
+        var ticket = ticketDataFormat.Unprotect(decodedValue);
+
+        return Json(new
+        {
+            status = 200,
+            scheme,
+            cookieName = options.Cookie.Name ?? string.Empty,
+            ticketFound = ticket is not null,
+            claims = ticket?.Principal?.Claims.Select(static c => new
+            {
+                type = c.Type,
+                value = c.Value,
+                issuer = c.Issuer
+            }).ToArray() ?? Array.Empty<object>()
+        });
+    }
+
     [HttpGet("Home/DuplicateInQuery")]
     public IActionResult DuplicateInQuery(int? age)
     {
@@ -499,6 +639,47 @@ public class HomeController : Controller
             .Select(static e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? e.Exception?.Message : e.ErrorMessage)
             .Where(static message => !string.IsNullOrWhiteSpace(message))
             .ToArray()!;
+    }
+
+    private object DecodeCurrentAuthCookie()
+    {
+        var scheme = IdentityConstants.ApplicationScheme;
+        var options = _cookieOptionsMonitor.Get(scheme);
+        var cookieName = options.Cookie.Name ?? string.Empty;
+
+        if (!Request.Cookies.TryGetValue(cookieName, out var cookieValue) || string.IsNullOrWhiteSpace(cookieValue))
+        {
+            return new
+            {
+                scheme,
+                cookieName,
+                cookiePresent = false,
+                ticketFound = false,
+                claims = Array.Empty<object>()
+            };
+        }
+
+        var ticket = options.TicketDataFormat.Unprotect(cookieValue);
+
+        return new
+        {
+            scheme,
+            cookieName,
+            cookiePresent = true,
+            ticketFound = ticket is not null,
+            claims = ticket?.Principal?.Claims.Select(static c => new
+            {
+                type = c.Type,
+                value = c.Value,
+                issuer = c.Issuer
+            }).ToArray() ?? Array.Empty<object>(),
+            properties = new
+            {
+                issuedUtc = ticket?.Properties?.IssuedUtc,
+                expiresUtc = ticket?.Properties?.ExpiresUtc,
+                isPersistent = ticket?.Properties?.IsPersistent ?? false,
+            }
+        };
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
