@@ -1,0 +1,89 @@
+﻿@model StatefulViewModel
+
+@{
+    ViewData["Title"] = "Stateful";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="mb-4">
+            <h1 class="display-6">Stateful</h1>
+            <p class="text-muted mb-0">
+                This page demonstrates how to use model binding to maintain state across requests
+            </p>
+        </div>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-success" role="alert">
+                @message
+            </div>
+        }
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" placeholder="Jho Doe" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Age" class="form-label"></label>
+                        <input asp-for="Age" class="form-control" type="number" />
+                        <span asp-validation-for="Age" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Country" class="form-label"></label>
+                        <select asp-for="Country" class="form-select" asp-items="Model.CountryOptions">
+                            <option value="">-- Select a country --</option>
+                        </select>
+                        <span asp-validation-for="Country" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Bound values</h2>
+                <pre class="mb-0">Name=[@Model.Name]
+Age=[@Model.Age]
+Country=[@Model.Country]
+Notes=[@Model.Notes]</pre>
+            </div>
+        </div>
+
+        <div class="mt-4 small text-muted">
+            <p class="mb-1">Try these cases:</p>
+            <ul class="mb-0">
+                <li>Post a form with valid values, and observe the options in the country dropdown are lost.</li>
+            </ul>
+        </div>
+
+        <div class="mt-4">
+            <h2 class="h6">Extra experiments</h2>
+            <ul class="mb-0">
+                <li><a asp-controller="Stateful" asp-action="TempDataDemo">TempData Demo</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

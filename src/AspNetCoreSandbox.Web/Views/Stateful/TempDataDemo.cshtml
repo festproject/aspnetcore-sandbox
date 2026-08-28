@@ -1,0 +1,121 @@
+﻿@{
+    ViewData["Title"] = "TempData demo";
+
+    var formFieldName = "__RequestVerificationToken";
+    var headerName = "RequestVerificationToken";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="mb-4">
+            <h1 class="display-6">Stateful</h1>
+            <p class="text-muted mb-0">
+                This page demonstrates how to use TempData to maintain state across requests
+            </p>
+        </div>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-success" role="alert">
+                @message
+            </div>
+        }
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label"></label>
+                        <textarea id="notes" name="notes" class="form-control" rows="4">@(TempData["Notes"])</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-primary" data-action="save">Save</button>
+            <button type="button" class="btn btn-outline-primary" data-action="load">Load</button>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">TempData values</h2>
+                <pre class="mb-0">Notes=[@(TempData["Notes"])]</pre>
+            </div>
+        </div>
+
+        <div class="mt-4 small text-muted">
+            <p class="mb-1">Try these cases:</p>
+            <ul class="mb-0">
+                <li>Post a form with messages. Observe that the notes are saved between requests.</li>
+                <li>Click the "Save" button to save the notes via an AJAX request, and then click "Load" to retrieve them.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const formFieldName = '@formFieldName';
+            const headerName = '@headerName';
+            const tokenInput = document.querySelector('input[name="@formFieldName"]');
+            const token = tokenInput ? tokenInput.value : '';
+
+            async function save() {
+                const url = '/Stateful/TempDataDemo/save';
+                const headers = {
+                    'Content-Type': 'application/json',
+                    [headerName]: token
+                };
+
+                const body = document.getElementById('notes').value;
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    alert('saved');
+                } else {
+                    alert('save failed');
+                }
+            }
+
+            async function load() {
+                const url = '/Stateful/TempDataDemo/load';
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('notes').value = data.notes || '';
+                    alert('loaded');
+                } else {
+                    alert('load failed');
+                }
+            }
+
+            document.querySelectorAll('button[data-action]').forEach(button => {
+                if (button.dataset.action === 'save') {
+                    button.addEventListener('click', save);
+                } else if (button.dataset.action === 'load') {
+                    button.addEventListener('click', load);
+                }
+            });
+        })();
+    </script>
+}
