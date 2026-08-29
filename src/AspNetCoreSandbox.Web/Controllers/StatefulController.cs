@@ -1,16 +1,21 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using AspNetCoreSandbox.Web.Models;
+using PageState;
+
 namespace AspNetCoreSandbox.Web.Controllers;
 
-using Microsoft.AspNetCore.Mvc;
-using AspNetCoreSandbox.Web.Models;
-using Microsoft.AspNetCore.Mvc.Rendering;
 public class StatefulController : Controller
 {
     private readonly ILogger<StatefulController> _logger;
+    private readonly IPageStateAccessor _pageStateAccessor;
 
     public StatefulController(
-        ILogger<StatefulController> logger)
+        ILogger<StatefulController> logger,
+        IPageStateAccessor pageStateAccessor)
     {
         _logger = logger;
+        _pageStateAccessor = pageStateAccessor;
     }
 
     [HttpGet]
@@ -65,6 +70,42 @@ public class StatefulController : Controller
         return Json(new { notes });
     }
 
+    [HttpGet("Stateful/PageStateDemo")]
+    public IActionResult PageStateDemo()
+    {
+        var orderId = 123; // stands in for "loaded from the DB" in this sandbox
+        _pageStateAccessor.Set(new OrderEditPageState(orderId));
+
+        return View(new OrderEditViewModel
+        {
+            OrderId = orderId,
+            Input = new OrderEditInput(),
+            ProductOptions = GetProductOptions()
+        });
+    }
+
+    [HttpPost("Stateful/PageStateDemo")]
+    [ValidateAntiForgeryToken]
+    public IActionResult PageStateDemoPost(
+        [FromPageState] OrderEditPageState state,
+        [FromForm] OrderEditInput input)
+    {
+        var vm = new OrderEditViewModel
+        {
+            OrderId = state.OrderId,
+            Input = input,
+            ProductOptions = GetProductOptions()
+        };
+
+        if (!ModelState.IsValid)
+        {
+            return View("PageStateDemo", vm);
+        }
+
+        ViewData["Message"] = $"Order {state.OrderId} updated for {input.CustomerName}.";
+        return View("PageStateDemo", vm);
+    }
+
     protected private List<SelectListItem> GetCountryOptions()
     {
         return new List<SelectListItem>
@@ -73,6 +114,17 @@ public class StatefulController : Controller
             new SelectListItem { Value = "CA", Text = "Canada" },
             new SelectListItem { Value = "GB", Text = "United Kingdom" },
             new SelectListItem { Value = "AU", Text = "Australia" }
+        };
+    }
+
+    protected private List<SelectListItem> GetProductOptions()
+    {
+        return new List<SelectListItem>
+        {
+            new SelectListItem { Value = "P1", Text = "Product 1" },
+            new SelectListItem { Value = "P2", Text = "Product 2" },
+            new SelectListItem { Value = "P3", Text = "Product 3" },
+            new SelectListItem { Value = "P4", Text = "Product 4" }
         };
     }
 }

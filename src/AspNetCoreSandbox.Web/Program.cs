@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using AspNetCoreSandbox.Web.Data;
+using PageState;
 
 var builder = WebApplication.CreateBuilder(args);
 const string AdminCookieScheme = "AdminCookieScheme";
@@ -34,6 +36,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddControllersWithViews();
 
+builder.Services.AddDataProtection()
+    .SetApplicationName("AspNetCoreSandbox");
+builder.Services.AddPageState();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -65,3 +71,6 @@ app.MapRazorPages()
    .WithStaticAssets();
 
 app.Run();
+
+// Exposed so WebApplicationFactory<Program> in PageState.IntegrationTests can host this app.
+public partial class Program { }

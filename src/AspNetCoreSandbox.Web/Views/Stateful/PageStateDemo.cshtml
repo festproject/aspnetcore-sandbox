@@ -1,0 +1,79 @@
+@model OrderEditViewModel
+
+@{
+    ViewData["Title"] = "PageState demo";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="mb-4">
+            <h1 class="display-6">Stateful</h1>
+            <p class="text-muted mb-0">
+                This page demonstrates PageState: the Order ID is sealed into a hidden field on GET
+                and round-tripped back on POST, instead of being kept in any server-side store.
+            </p>
+        </div>
+
+        @if (ViewData["Message"] is string message)
+        {
+            <div class="alert alert-success" role="alert">
+                @message
+            </div>
+        }
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+                    <page-state />
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Order ID</label>
+                        <p class="form-control-plaintext">@Model.OrderId <span class="text-muted small">(not editable on this page &mdash; carried in PageState, not a form input)</span></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.CustomerName" class="form-label"></label>
+                        <input asp-for="Input.CustomerName" class="form-control" placeholder="John Doe" />
+                        <span asp-validation-for="Input.CustomerName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Product" class="form-label"></label>
+                        <select asp-for="Input.Product" class="form-select" asp-items="Model.ProductOptions">
+                            <option value="">-- Select a product --</option>
+                        </select>
+                        <span asp-validation-for="Input.Product" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5">Bound values</h2>
+                <pre class="mb-0">Order ID=[@Model.OrderId]
+Customer Name=[@Model.Input.CustomerName]
+Product=[@Model.Input.Product]</pre>
+            </div>
+        </div>
+
+        <div class="mt-4 small text-muted">
+            <p class="mb-1">Try these cases:</p>
+            <ul class="mb-0">
+                <li>Post a form with valid values, and observe the Order ID and product options survive the round trip.</li>
+                <li>Leave Customer Name blank &mdash; the page re-renders with a validation error, and the hidden PageState field is still valid with zero extra code in the controller.</li>
+                <li>Open DevTools, edit the <code>__pagestate</code> hidden input's value, then submit &mdash; the request is short-circuited before the action body runs.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @* invalidate the client-side validation *@
+    @* <partial name="_ValidationScriptsPartial" /> *@
+}
