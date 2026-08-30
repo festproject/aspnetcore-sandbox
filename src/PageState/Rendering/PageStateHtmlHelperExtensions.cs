@@ -2,15 +2,16 @@ using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using PageState.Internal;
 
-namespace PageState.Internal;
+namespace PageState;
 
-// Must be public: this is the app-facing escape hatch for multiple forms on one page
-// (@Html.PageState(saveState) / @Html.PageState(deleteState)), overriding the single-form
-// convenience the <page-state /> tag helper + IPageStateAccessor provide.
+// Escape hatch for multiple forms on one page: the <page-state /> tag helper covers the single
+// [PageState] property on the page's own model, this covers additional independent states —
+// @Html.PageState(saveState) / @Html.PageState(deleteState).
 public static class PageStateHtmlHelperExtensions
 {
-    public static IHtmlContent PageState<T>(this IHtmlHelper html, T state)
+    public static IHtmlContent PageState<T>(this IHtmlHelper html, T state) where T : notnull
     {
         var httpContext = html.ViewContext.HttpContext;
         var services = httpContext.RequestServices;

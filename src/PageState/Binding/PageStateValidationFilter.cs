@@ -9,7 +9,7 @@ namespace PageState.Internal;
 
 /// <summary>
 /// Registered globally by AddPageState() so it cannot be omitted. Without this filter, a binder
-/// that only adds a model error leaves the [FromPageState] parameter null and lets the action run,
+/// that only adds a model error leaves the [PageState] property null and lets the action run,
 /// which turns a tampered token into a NullReferenceException instead of a controlled short-circuit.
 /// </summary>
 internal sealed class PageStateValidationFilter : IActionFilter, IPageFilter

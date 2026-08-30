@@ -16,19 +16,19 @@ public class DataProtectionKeyRingTests
         using var clientB = factoryB.CreateClient();
 
         var htmlA = await clientA.GetStringAsync("/Stateful/PageStateDemo");
-        var tokenFromA = OrderEditPageStateDemoTests.ExtractFieldValue(htmlA, "__pagestate");
+        var tokenFromA = OrderEditPageStateDemoTests.ExtractFieldValue(htmlA, "__pagestate.OrderId");
 
         var htmlB = await clientB.GetStringAsync("/Stateful/PageStateDemo");
         var afTokenB = OrderEditPageStateDemoTests.ExtractFieldValue(htmlB, "__RequestVerificationToken");
 
         var response = await clientB.PostAsync("/Stateful/PageStateDemo", OrderEditPageStateDemoTests.BuildForm(
-            ("__pagestate", tokenFromA),
+            ("__pagestate.OrderId", tokenFromA),
             ("__RequestVerificationToken", afTokenB),
-            ("Input.CustomerName", "Eve"),
-            ("Input.Product", "P1")));
+            ("CustomerName", "Eve"),
+            ("Product", "P1")));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("This page has expired", await response.Content.ReadAsStringAsync());
+        Assert.Contains("This page is no longer valid", await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -43,16 +43,16 @@ public class DataProtectionKeyRingTests
             using var clientB = factoryB.CreateClient();
 
             var htmlA = await clientA.GetStringAsync("/Stateful/PageStateDemo");
-            var tokenFromA = OrderEditPageStateDemoTests.ExtractFieldValue(htmlA, "__pagestate");
+            var tokenFromA = OrderEditPageStateDemoTests.ExtractFieldValue(htmlA, "__pagestate.OrderId");
 
             var htmlB = await clientB.GetStringAsync("/Stateful/PageStateDemo");
             var afTokenB = OrderEditPageStateDemoTests.ExtractFieldValue(htmlB, "__RequestVerificationToken");
 
             var response = await clientB.PostAsync("/Stateful/PageStateDemo", OrderEditPageStateDemoTests.BuildForm(
-                ("__pagestate", tokenFromA),
+                ("__pagestate.OrderId", tokenFromA),
                 ("__RequestVerificationToken", afTokenB),
-                ("Input.CustomerName", "Frank"),
-                ("Input.Product", "P1")));
+                ("CustomerName", "Frank"),
+                ("Product", "P1")));
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Contains("updated for Frank", await response.Content.ReadAsStringAsync());

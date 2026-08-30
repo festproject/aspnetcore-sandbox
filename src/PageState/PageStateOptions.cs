@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -18,7 +17,6 @@ public sealed class PageStateOptions
     public string OwnerClaimType { get; set; } = "psid";
 
     public JsonSerializerOptions SerializerOptions { get; set; } = CreateDefaultJson();
-    public IList<Assembly> ScanAssemblies { get; } = new List<Assembly>();
 
     private static JsonSerializerOptions CreateDefaultJson() => new()
     {

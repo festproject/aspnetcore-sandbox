@@ -14,38 +14,33 @@ internal static class TestFactory
         return options;
     }
 
-    public static PageStateRegistry CreateRegistry(PageStateOptions options)
-        => new(Options.Create(options));
-
     public static PageStateProtector CreateProtector(
         PageStateOptions? options = null,
         TimeProvider? timeProvider = null,
         IDataProtectionProvider? dataProtectionProvider = null)
     {
-        options ??= CreateOptions();
         return new PageStateProtector(
             dataProtectionProvider ?? new EphemeralDataProtectionProvider(),
-            CreateRegistry(options),
-            Options.Create(options),
+            Options.Create(options ?? CreateOptions()),
             timeProvider ?? TimeProvider.System);
     }
 
     /// <summary>
-    /// Reproduces PageStateProtector.Protect's crypto steps directly over a hand-built frame, so
-    /// tests can mint a token wrapping a deliberately malformed envelope — something you cannot
-    /// produce by tampering with a real ciphertext, since Data Protection is authenticated and a
-    /// single bit flip just breaks the integrity check instead of altering the decrypted frame.
+    /// Reproduces PageStateProtector.Protect's crypto steps directly over hand-built payload
+    /// bytes, so tests can mint a token wrapping a deliberately wrong-shape payload — something
+    /// you cannot produce by tampering with a real ciphertext, since Data Protection is
+    /// authenticated and a single bit flip just breaks the integrity check.
     /// </summary>
-    public static string MintRawFrame(
+    public static string MintRawPayload<T>(
         IDataProtectionProvider provider,
-        string workflow,
-        byte[] frame,
+        byte[] payload,
+        string? owner,
         TimeSpan? lifetime = null,
         TimeProvider? timeProvider = null)
     {
         var expiresAt = (timeProvider ?? TimeProvider.System).GetUtcNow() + (lifetime ?? TimeSpan.FromMinutes(30));
-        var timeLimited = provider.CreateProtector("PageState", workflow, "v1").ToTimeLimitedDataProtector();
-        var ciphertext = timeLimited.Protect(frame, expiresAt);
+        var timeLimited = provider.CreateProtector("PageState", typeof(T).FullName!, owner ?? "\0anon").ToTimeLimitedDataProtector();
+        var ciphertext = timeLimited.Protect(payload, expiresAt);
         return WebEncoders.Base64UrlEncode(ciphertext);
     }
 }

@@ -20,9 +20,9 @@ public class AntiforgeryOrderingTests : IClassFixture<SpyProtectorWebApplication
         var response = await client.PostAsync("/Stateful/PageStateDemo", new FormUrlEncodedContent(
             new Dictionary<string, string>
             {
-                ["__pagestate"] = "irrelevant-because-antiforgery-should-reject-first",
-                ["Input.CustomerName"] = "Mallory",
-                ["Input.Product"] = "P1"
+                ["__pagestate.OrderId"] = "irrelevant-because-antiforgery-should-reject-first",
+                ["CustomerName"] = "Mallory",
+                ["Product"] = "P1"
             }));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

@@ -35,17 +35,17 @@
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Input.CustomerName" class="form-label"></label>
-                        <input asp-for="Input.CustomerName" class="form-control" placeholder="John Doe" />
-                        <span asp-validation-for="Input.CustomerName" class="text-danger"></span>
+                        <label asp-for="CustomerName" class="form-label"></label>
+                        <input asp-for="CustomerName" class="form-control" placeholder="John Doe" />
+                        <span asp-validation-for="CustomerName" class="text-danger"></span>
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Input.Product" class="form-label"></label>
-                        <select asp-for="Input.Product" class="form-select" asp-items="Model.ProductOptions">
+                        <label asp-for="Product" class="form-label"></label>
+                        <select asp-for="Product" class="form-select" asp-items="Model.ProductOptions">
                             <option value="">-- Select a product --</option>
                         </select>
-                        <span asp-validation-for="Input.Product" class="text-danger"></span>
+                        <span asp-validation-for="Product" class="text-danger"></span>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Submit</button>
@@ -57,8 +57,8 @@
             <div class="card-body">
                 <h2 class="h5">Bound values</h2>
                 <pre class="mb-0">Order ID=[@Model.OrderId]
-Customer Name=[@Model.Input.CustomerName]
-Product=[@Model.Input.Product]</pre>
+Customer Name=[@Model.CustomerName]
+Product=[@Model.Product]</pre>
             </div>
         </div>
 

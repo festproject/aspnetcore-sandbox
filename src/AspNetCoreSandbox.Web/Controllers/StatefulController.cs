@@ -8,14 +8,10 @@ namespace AspNetCoreSandbox.Web.Controllers;
 public class StatefulController : Controller
 {
     private readonly ILogger<StatefulController> _logger;
-    private readonly IPageStateAccessor _pageStateAccessor;
 
-    public StatefulController(
-        ILogger<StatefulController> logger,
-        IPageStateAccessor pageStateAccessor)
+    public StatefulController(ILogger<StatefulController> logger)
     {
         _logger = logger;
-        _pageStateAccessor = pageStateAccessor;
     }
 
     [HttpGet]
@@ -74,36 +70,30 @@ public class StatefulController : Controller
     public IActionResult PageStateDemo()
     {
         var orderId = 123; // stands in for "loaded from the DB" in this sandbox
-        _pageStateAccessor.Set(new OrderEditPageState(orderId));
-
         return View(new OrderEditViewModel
         {
-            OrderId = orderId,
-            Input = new OrderEditInput(),
-            ProductOptions = GetProductOptions()
+            OrderId = orderId
         });
     }
 
     [HttpPost("Stateful/PageStateDemo")]
     [ValidateAntiForgeryToken]
-    public IActionResult PageStateDemoPost(
-        [FromPageState] OrderEditPageState state,
-        [FromForm] OrderEditInput input)
+    public IActionResult PageStateDemoPost(OrderEditViewModel vm)
     {
-        var vm = new OrderEditViewModel
-        {
-            OrderId = state.OrderId,
-            Input = input,
-            ProductOptions = GetProductOptions()
-        };
-
         if (!ModelState.IsValid)
         {
-            return View("PageStateDemo", vm);
+            return View("PageStateDemo", vm); // ProductOptions handled. Nothing to remember.
         }
 
-        ViewData["Message"] = $"Order {state.OrderId} updated for {input.CustomerName}.";
+        ViewData["Message"] = $"Order {vm.OrderId} updated for {vm.CustomerName}.";
         return View("PageStateDemo", vm);
+    }
+
+    [Hydrate]
+    private Task HydratePageStateDemo(OrderEditViewModel vm)
+    {
+        vm.ProductOptions = GetProductOptions();
+        return Task.CompletedTask;
     }
 
     protected private List<SelectListItem> GetCountryOptions()

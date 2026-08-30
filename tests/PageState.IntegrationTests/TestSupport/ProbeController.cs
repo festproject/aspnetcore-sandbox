@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using PageState;
 
 namespace PageState.IntegrationTests.TestSupport;
 
@@ -13,14 +12,10 @@ public sealed class ProbeController : Controller
     public static int InvocationCount;
 
     [HttpGet]
-    public IActionResult Get([FromServices] IPageStateAccessor accessor)
-    {
-        accessor.Set(new ProbeState(42));
-        return Content("probe-get-ok");
-    }
+    public IActionResult Get() => Content("probe-get-ok");
 
     [HttpPost]
-    public IActionResult Post([FromPageState] ProbeState state)
+    public IActionResult Post(ProbeViewModel vm)
     {
         Interlocked.Increment(ref InvocationCount);
         return Content("probe-post-ok");

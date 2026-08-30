@@ -8,8 +8,9 @@ namespace PageState.Internal;
 
 /// <summary>
 /// Shared markup-building logic behind both entry points: the &lt;page-state /&gt; tag helper
-/// (which only has an object + runtime Type from IPageStateAccessor) and @Html.PageState&lt;T&gt;
-/// (which has a compile-time T and can call IPageStateProtector.Protect&lt;T&gt; directly).
+/// (which only has a model instance and must find its [PageState] property by reflection) and
+/// @Html.PageState&lt;T&gt; (which has a compile-time T and can call IPageStateProtector.Protect&lt;T&gt;
+/// directly).
 /// </summary>
 internal static class PageStateRendering
 {
@@ -17,11 +18,27 @@ internal static class PageStateRendering
         typeof(IPageStateProtector).GetMethod(nameof(IPageStateProtector.Protect))!;
 
     private static readonly ConcurrentDictionary<Type, MethodInfo> ProtectMethodCache = new();
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PageStatePropertiesCache = new();
 
-    internal static string ProtectDynamic(IPageStateProtector protector, Type stateType, object state, string? owner)
+    /// <summary>
+    /// Finds every [PageState] property on a model type, cached per type — this is the reflection
+    /// call site the guide flags in §4.4: the tag helper only has a model instance, not a
+    /// compile-time T, so it needs a cached generic dispatcher rather than MakeGenericMethod per
+    /// request. A model may declare more than one [PageState] property; each gets its own field.
+    /// </summary>
+    internal static PropertyInfo[] FindPageStateProperties(Type modelType)
+        => PageStatePropertiesCache.GetOrAdd(modelType, static type => type
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.IsDefined(typeof(PageStateAttribute), inherit: true))
+            .ToArray());
+
+    internal static string FieldNameFor(PageStateOptions options, string propertyName)
+        => $"{options.FormFieldName}.{propertyName}";
+
+    internal static string ProtectDynamic(IPageStateProtector protector, Type stateType, object state, string? owner, PageStateSite site)
     {
         var method = ProtectMethodCache.GetOrAdd(stateType, static (type, definition) => definition.MakeGenericMethod(type), ProtectMethodDefinition);
-        return (string)method.Invoke(protector, [state, owner])!;
+        return (string)method.Invoke(protector, [state, owner, site])!;
     }
 
     internal static void RenderHiddenInput(TagHelperOutput output, string fieldName, string token)

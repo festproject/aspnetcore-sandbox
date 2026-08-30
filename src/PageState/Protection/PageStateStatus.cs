@@ -5,10 +5,7 @@ public enum PageStateStatus
     Success,
     Missing,
     TooLarge,
-    InvalidToken,
+    Invalid,
     Expired,
-    WrongOwner,
-    InvalidEnvelope,
-    InvalidSchema,
     InvalidPayload
 }

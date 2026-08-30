@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -13,25 +12,23 @@ internal static class PageStateModelBinder
 
 internal sealed class PageStateModelBinder<T> : IModelBinder
 {
-    // MVC's ModelBinderFactory caches the binder instance across requests for a given
-    // (Type, BindingInfo), so only singleton-lifetime dependencies may be constructor-injected
-    // here. IPageStateAccessor is scoped — it must be resolved per-request from
-    // HttpContext.RequestServices inside BindModelAsync instead, or ActivatorUtilities throws
-    // "Cannot resolve scoped service from root provider" the moment the binder is created.
     private readonly IPageStateProtector _protector;
     private readonly IPageStateOwnerProvider _ownerProvider;
     private readonly PageStateOptions _options;
+    private readonly PageStateSite _site;
     private readonly ILogger<PageStateModelBinder<T>> _logger;
 
     public PageStateModelBinder(
         IPageStateProtector protector,
         IPageStateOwnerProvider ownerProvider,
         IOptions<PageStateOptions> options,
+        PageStateSite site,
         ILogger<PageStateModelBinder<T>> logger)
     {
         _protector = protector;
         _ownerProvider = ownerProvider;
         _options = options.Value;
+        _site = site;
         _logger = logger;
     }
 
@@ -42,16 +39,15 @@ internal sealed class PageStateModelBinder<T> : IModelBinder
         string? token = null;
         if (httpContext.Request.HasFormContentType)
         {
-            token = httpContext.Request.Form[_options.FormFieldName];
+            token = httpContext.Request.Form[PageStateRendering.FieldNameFor(_options, _site.PropertyName)];
         }
 
         var owner = _ownerProvider.GetOwner(httpContext);
-        var result = _protector.Unprotect<T>(token, owner);
+        var result = _protector.Unprotect<T>(token, owner, _site);
 
         if (result.IsSuccess)
         {
             bindingContext.Result = ModelBindingResult.Success(result.State);
-            httpContext.RequestServices.GetRequiredService<IPageStateAccessor>().Set(result.State);
             return Task.CompletedTask;
         }
 

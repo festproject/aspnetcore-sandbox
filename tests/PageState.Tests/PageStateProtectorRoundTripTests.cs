@@ -30,13 +30,37 @@ public class PageStateProtectorRoundTripTests
     public void Protect_Unprotect_RoundTrips_WithNullOwner()
     {
         var protector = TestFactory.CreateProtector();
-        var state = new WorkflowAStateV1("value");
+        var state = new TypeAState("value");
 
         var token = protector.Protect(state, owner: null);
-        var result = protector.Unprotect<WorkflowAStateV1>(token, owner: null);
+        var result = protector.Unprotect<TypeAState>(token, owner: null);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(state, result.State);
+    }
+
+    [Fact]
+    public void Protect_UsesDeclaredType_NotRuntimeType_WhenAssignedADerivedInstance()
+    {
+        var protector = TestFactory.CreateProtector();
+        BaseState state = new DerivedState { Value = "base-value", Extra = "extra-value" };
+
+        // T is inferred as BaseState from the declared-type local, even though the runtime
+        // instance is DerivedState — the whole point of the generic-T design (guide §4.4).
+        var token = protector.Protect(state, owner: null);
+        var result = protector.Unprotect<BaseState>(token, owner: null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("base-value", result.State!.Value);
+    }
+
+    [Fact]
+    public void Protect_Throws_WhenTIsInferredAsObject()
+    {
+        var protector = TestFactory.CreateProtector();
+        object state = new RoundTripState("x", [], null, null);
+
+        Assert.Throws<ArgumentException>(() => protector.Protect(state, owner: null));
     }
 
     [Fact]

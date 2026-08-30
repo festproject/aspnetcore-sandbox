@@ -11,15 +11,15 @@ public sealed class SpyPageStateProtector : IPageStateProtector
     public int ProtectCallCount { get; private set; }
     public int UnprotectCallCount { get; private set; }
 
-    public string Protect<T>(T state, string? owner)
+    public string Protect<T>(T state, string? owner, PageStateSite site = default) where T : notnull
     {
         ProtectCallCount++;
-        return _inner.Protect(state, owner);
+        return _inner.Protect(state, owner, site);
     }
 
-    public PageStateReadResult<T> Unprotect<T>(string? token, string? owner)
+    public PageStateReadResult<T> Unprotect<T>(string? token, string? owner, PageStateSite site = default)
     {
         UnprotectCallCount++;
-        return _inner.Unprotect<T>(token, owner);
+        return _inner.Unprotect<T>(token, owner, site);
     }
 }
